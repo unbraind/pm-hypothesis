@@ -95,8 +95,8 @@ test('current source is revalidated after an interleaved native edit', async t =
 test('native source mismatched parent and type are refused before dependent effects', async t => {
   const f = await tracker(t); const store = new Store(f.options);
   const fact = await observe(f.investigation, 'x', 'y', f.options); const item = await store.get(fact.observation);
-  await assert.rejects(store.record(fact.observation, 'Test', 'Fact', String(item.hypothesis_record)), { code: 'conflict' });
-  await assert.rejects(store.record(fact.observation, 'Question', 'Fact', String(item.hypothesis_record), f.investigation), { code: 'conflict' });
+  await assert.rejects(store.planRecord(fact.observation, 'Test', 'Fact', () => String(item.hypothesis_record)), { code: 'conflict' });
+  await assert.rejects(store.planRecord(fact.observation, 'Question', 'Fact', () => String(item.hypothesis_record), f.investigation), { code: 'conflict' });
 });
 
 test('CAS rechecks the revision at the SDK lock boundary', async t => {

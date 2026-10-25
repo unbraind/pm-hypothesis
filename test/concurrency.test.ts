@@ -33,12 +33,12 @@ async function convergence(f: Awaited<ReturnType<typeof setup>>) {
 describe('conditional recovery boundaries', { concurrency: 4 }, () => {
 const operations = ['observe', 'withdraw', 'conclude'];
 for (const operation of operations) {
-  const boundaries: Boundary[] = operation === 'observe' ? ['record-read', 'record-written', 'owner-read', 'admission-ready', 'owner-written', 'complete'] : ['owner-read', 'admission-ready', 'owner-written', 'complete'];
+  const boundaries: Boundary[] = operation === 'observe' ? ['record-read', 'plan-ready', 'owner-read', 'admission-ready', 'owner-written', 'record-written', 'complete'] : ['owner-read', 'admission-ready', 'owner-written', 'complete'];
   for (const boundary of boundaries) {
     test(`${operation}: interleaving at ${boundary} preserves both writers`, async t => {
       const f = await setup(t, operation); let injected = false;
       const action = f.run({ ...f.options, boundary: async point => { if (point === boundary && !injected) { injected = true; await f.competitor(); } } });
-      if (boundary === 'owner-written' || boundary === 'complete') await action;
+      if (boundary === 'owner-written' || boundary === 'record-written' || boundary === 'complete') await action;
       else { await assert.rejects(action, { code: 'conflict' }); await f.run(f.options); }
       assert.equal(injected, true); await f.check();
     });
@@ -49,15 +49,15 @@ for (const operation of operations) {
     });
   }
   for (const transition of ['prepared', 'step_applied', 'step_recorded', 'committing', 'committed'] as const) {
-    for (const target of operation === 'observe' ? ['record', 'owner'] : ['owner']) {
+    for (const target of operation === 'observe' ? ['source', 'owner'] : ['owner']) {
       test(`${operation}: SDK ${target} ${transition} queues competing conditional writer`, async t => {
         const f = await setup(t, operation); let pending: Promise<unknown> | undefined;
-        await f.run({ ...f.options, onTransition: async event => { if (event.transition === transition && event.transactionId.includes(`-${target}-`) && pending === undefined) pending = f.competitor().catch(error => { assert.equal(error.code, 'conflict'); return f.competitor(); }); } });
-        assert.ok(pending); await pending; await f.check();
+        await f.run({ ...f.options, onTransition: async event => { if (event.transition === transition && (event.stepId === undefined || event.stepId.startsWith(target === 'owner' ? '1-' : '2-')) && pending === undefined) pending = f.competitor().catch(error => { assert.equal(error.code, 'conflict'); }); } });
+        assert.ok(pending); await pending; await f.competitor(); await f.check();
       });
       test(`${operation}: SDK ${target} ${transition} crash revalidates current state`, async t => {
         const f = await setup(t, operation); let interrupted = false;
-        await assert.rejects(f.run({ ...f.options, onTransition: event => { if (event.transition === transition && event.transactionId.includes(`-${target}-`)) { interrupted = true; throw new WorkspaceTransactionInterruptedError(); } } }));
+        await assert.rejects(f.run({ ...f.options, onTransition: event => { if (event.transition === transition && (event.stepId === undefined || event.stepId.startsWith(target === 'owner' ? '1-' : '2-'))) { interrupted = true; throw new WorkspaceTransactionInterruptedError(); } } }));
         assert.equal(interrupted, true); await convergence(f);
       });
     }
@@ -77,7 +77,7 @@ test('changing native source prevents every dependent owner mutation', async t =
   const edits = { message: 'Synthetic native edit', hypothesisRecord: 'edited source' }; await f.client.update(idResult.observation, edits);
   await assert.rejects(observe(f.investigation, 'install', 'passed', { ...f.options, boundary: async () => { mutated = true; } }), { code: 'conflict' });
   assert.equal(state((await new Store(f.options).get(f.investigation)).hypothesis_state).observations.length, factsBefore + 1);
-  assert.equal(mutated, true);
+  assert.equal(mutated, false);
 });
 
 });

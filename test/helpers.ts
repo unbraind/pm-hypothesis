@@ -1,4 +1,4 @@
-import { mkdtemp, rm, mkdir, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, mkdir, writeFile, readdir, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { TestContext } from 'node:test';
@@ -35,3 +35,16 @@ export async function extension(workspace: string) {
 }
 /** Fence ancestor discovery and remove git from the native command path. */
 export function environment(root: string, workspace: string) { return { ...process.env, PM_PATH: workspace, PM_AUTHOR: 'fixture', GIT_CEILING_DIRECTORIES: dirname(root), PATH: root }; }
+
+/** Compare all durable tracker bytes; retain explicit search evaluation fixtures. */
+export async function durable(workspace: string, path = ''): Promise<Record<string, string>> {
+  const files: Record<string, string> = {};
+  for (const entry of await readdir(join(workspace, path), { withFileTypes: true })) {
+    if (!path && ['runtime', 'locks', 'transactions', 'checkpoints', 'extensions'].includes(entry.name)) continue;
+    const relative = join(path, entry.name);
+    if (path === 'search' && entry.name !== 'eval-queries.json') continue;
+    if (entry.isDirectory()) Object.assign(files, await durable(workspace, relative));
+    else files[relative] = (await readFile(join(workspace, relative))).toString('hex');
+  }
+  return files;
+}

@@ -6,22 +6,29 @@ status: in_progress
 priority: 2
 tags: []
 created_at: "2026-10-25T08:12:42.151Z"
-updated_at: "2026-10-25T15:07:31.747Z"
+updated_at: "2026-10-25T21:38:56.358Z"
 author: codex-agent
 acceptance_criteria: "Native Question investigations, linked hypotheses and Test facts with provenance and registered schema; SDK-only storage without git."
 parent: pm-hypothesis-build
-comments[3]{created_at,author,text}:
+comments[6]{created_at,author,text}:
   "2026-10-25T08:18:39.486Z",codex-agent,"Implemented registered hypothesis_state and immutable hypothesis_record fields, SDK-registered Question/Test types, native parent links and audit comments. Minimal SDK trackers omit Question/Test, so open registers them explicitly. Reads certify native record discovery and load the complete atomic owner."
   "2026-10-25T08:38:15.849Z",codex-agent,"Cross-investigation regression was red against the implementation commit: the global SDK unique-key guard conflated equal source payloads. Source envelopes now include their native id and owner, so identical titles with different operation identities, equal explanations and equal facts stay independent. The dedicated real-tracker scenario is green; no prior records or histories were rewritten."
   "2026-10-25T15:07:25.299Z",codex-agent,"Acquisition options are copied before async boundaries, and Store owns a copy of workspace/author/revision options. A record-written callback changing the caller evidence, time and actor cannot change the payload admitted from that source. The real SDK regression compares admitted provenance against the native source envelope. Reverting the acquisition snapshot fails this assertion."
-files[6]{path,scope}:
+  "2026-10-25T20:35:33.688Z",codex-agent,"Every public decision read now obtains an SDK owner/source snapshot and validates native type, parent, immutable payload schema, provenance and withdrawal/closure. Invalid observations cannot witness elimination, invalid hypotheses are explicit matrix rows and excluded from next requests, and active invalid sources refuse conclusion. Resume and show expose validity issues and invalidate historical conclusions whose sources no longer hold. No read repairs or rewrites native records."
+  "2026-10-25T21:29:17.963Z",codex-agent,"Behavioral revert proof: npm run test:revert passed all 12 negative proofs in a disposable source copy. Reinstating create-before-validate makes the combined owner/source edit at record-read leave a fresh Test/history and fail durable byte equality. Bypassing current native source validation makes edited admitted provenance allow conclusion and fail the fixed case. Restoring owner retries that refresh captured sources fails the existing invocation-CAS regression. Each proof changes implementation only, requires a failing targeted regression, restores exact source bytes and removes its scratch copy. The two round-3 cases also failed on the prior committed implementation and pass with this change. Other retained proofs cover contradiction, withdrawal, survivor acknowledgment, discrimination, budgets, expected revisions, authoritative source reads, identity round trips and conclusion restoration."
+  "2026-10-25T21:33:21.912Z",codex-agent,"Recorded targeted execution through pm test --run --only-last passes 15/15 tests, zero failures or skips: both fixed review cases plus all current source-schema, provenance, type, parent, withdrawal, closure, deletion, identity-alias, replay, owner-first interruption, history-absence, workspace-contention, omission and conclusion-validity cases. Native host restoration tests pass 3/3 and return invalid support, historical conclusions and the actual next request from each advertised show command. The 100-sample elimination-equivalence property now persists real native source records instead of dangling owner-only fixtures. Existing native SDK crash/interleaving suites pass 118/118."
+files[10]{path,scope}:
   index.ts,project
   src/hypothesis.ts,project
+  src/records.ts,project
   src/store.ts,project
   src/types.ts,project
+  test/atomic-sources.test.ts,project
   test/hypothesis.test.ts,project
   test/review-classes.test.ts,project
-tests[2]:
+  test/source-model.test.ts,project
+  test/source-validity.test.ts,project
+tests[3]:
   - command: "node --test --test-name-pattern=\"open attaches\" test/hypothesis.test.ts"
     scope: project
     provenance:
@@ -35,6 +42,13 @@ tests[2]:
     provenance:
       author: codex-agent
       created_at: "2026-10-25T14:46:31.016Z"
+      source_kind: local_mutation
+      source_ref: feat/hypothesis
+  - command: node --test test/atomic-sources.test.ts test/source-validity.test.ts
+    scope: project
+    provenance:
+      author: codex-agent
+      created_at: "2026-10-25T21:02:42.542Z"
       source_kind: local_mutation
       source_ref: feat/hypothesis
 docs[3]{path,scope}:

@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { cp, mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
+import { cp, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PmClient, WorkspaceTransactionInterruptedError } from '@unbrained/pm-cli/sdk';
 import { add, conclude, open, observe } from '../index.ts';
 import type { Boundary, Options } from '../index.ts';
 import { Store, state } from '../src/store.ts';
-import { incident } from './helpers.ts';
+import { incident, durable } from './helpers.ts';
 
 for (const command of ['withdraw', 'conclude']) test(`invocation CAS: ${command} retains source preconditions across owner contention`, async t => {
   const f = await incident(t); const fact = await observe(f.investigation, 'seed', 'yes', f.options); let injected = false; let peerState = '';
@@ -30,18 +30,6 @@ for (const command of ['withdraw', 'conclude']) test(`invocation CAS: ${command}
 const commands = ['observe', 'admit', 'withdraw', 'conclude', 'add', 'open-existing'] as const;
 const faults = ['none', 'owner update', 'source edit', 'both', 'source withdrawal', 'peer conclusion'] as const;
 
-/** Compare all durable tracker bytes, omitting only gitignored SDK caches. */
-async function durable(workspace: string, path = ''): Promise<Record<string, string>> {
-  const files: Record<string, string> = {};
-  for (const entry of await readdir(join(workspace, path), { withFileTypes: true })) {
-    if (path === '' && ['locks', 'runtime', 'transactions', 'search', 'checkpoints', 'extensions'].includes(entry.name)) continue;
-    const relative = join(path, entry.name);
-    if (entry.isDirectory()) Object.assign(files, await durable(workspace, relative));
-    else files[relative] = (await readFile(join(workspace, relative))).toString('hex');
-  }
-  return files;
-}
-
 /** Prove a refusal appends nothing after a deliberately injected peer write. */
 async function refusesWithoutWrites(f: { workspace: string }, action: (save: () => Promise<void>) => Promise<unknown>) {
   let checkpoint: Record<string, string> | undefined;
@@ -49,20 +37,15 @@ async function refusesWithoutWrites(f: { workspace: string }, action: (save: () 
   assert.ok(checkpoint); assert.deepEqual(await durable(f.workspace), checkpoint);
 }
 
-test('conditional helper combined interleaving matrix: 1104 cases, six commands, every ordered boundary pair', { concurrency: 4 }, async t => {
+test('conditional helper combined interleaving matrix: 1312 cases, six commands, every ordered boundary pair', { concurrency: 4 }, async t => {
   const base = await incident(t);
   const seed = await observe(base.investigation, 'seed', 'yes', base.options);
   await observe(base.investigation, 'admitted', 'yes', base.options);
-  // Establish interrupted preparation through the actual API. Every case then
-  // proves recovery/admission adds zero durable bytes when its CAS refuses.
-  const interrupt = async (point: Boundary) => { if (point === 'record-written') throw new WorkspaceTransactionInterruptedError(); };
-  await assert.rejects(observe(base.investigation, 'new-key', 'yes', { ...base.options, boundary: interrupt }));
-  await assert.rejects(add(base.investigation, 'New explanation', [{ observation: 'new-key', value: 'no' }], { ...base.options, boundary: interrupt }));
   const template = await durable(base.workspace);
   let count = 0; const pending: Promise<void>[] = [];
   for (const command of commands) {
-    const points: Boundary[] = ['observe', 'admit', 'add'].includes(command) ? ['record-read', 'record-written', 'owner-read', 'admission-ready'] : ['owner-read', 'admission-ready'];
-    if (command !== 'admit' && command !== 'open-existing') points.push('owner-written');
+    const points: Boundary[] = ['observe', 'admit', 'add'].includes(command) ? ['record-read', 'plan-ready', 'owner-read', 'admission-ready'] : ['owner-read', 'admission-ready'];
+    if (command !== 'admit' && command !== 'open-existing') { points.push('owner-written'); if (command === 'observe' || command === 'add') points.push('record-written'); }
     points.push('complete');
     for (const first of points) for (const second of points) for (const fault of faults) for (const source of (fault === 'source edit' || fault === 'both' ? ['observation', 'hypothesis'] : ['observation'])) {
       pending.push(t.test(`${command}: ${first}/${second}: ${fault}/${source}`, async sub => {
@@ -73,7 +56,7 @@ test('conditional helper combined interleaving matrix: 1104 cases, six commands,
         const options = { workspace, author: 'fixture' }; const store = new Store(options);
         const client = new PmClient({ pmRoot: workspace, author: 'peer', noExtensions: true });
         const before = state((await store.get(base.investigation)).hypothesis_state); let checkpoint = template; const seen: Boundary[] = []; let verified = false;
-        const pre = (point: Boundary) => point !== 'owner-written' && point !== 'complete';
+        const pre = (point: Boundary) => point !== 'owner-written' && point !== 'record-written' && point !== 'complete';
         const conflict = fault === 'none' ? false : fault === 'source edit' ? pre(second) : fault === 'both' ? pre(first) || pre(second) : pre(first);
         /** Inspect the exact local commit before any later peer actions. */
         const intended = async () => {
@@ -126,7 +109,7 @@ test('conditional helper combined interleaving matrix: 1104 cases, six commands,
     }
   }
   await Promise.all(pending);
-  assert.equal(count, 1104);
+  assert.equal(count, 1312);
 });
 
 test('repeated source reads cannot overwrite an earlier revision precondition', async t => {
@@ -151,13 +134,13 @@ test('owner native revision is conditional even when its domain envelope is unch
 test('reopening by title carries the source owner revision captured during preparation', async t => {
   const f = await incident(t);
   await refusesWithoutWrites(f, save => open('Synthetic CI failure', { ...f.options, boundary: async point => {
-    if (point === 'record-written') {
+    if (point === 'owner-read') {
       const edits = { hypothesisRecord: 'Peer edited investigation provenance', message: 'Synthetic reopen source edit' }; await f.client.update(f.investigation, edits); await save();
     }
   } }));
 });
 
-test('prepared source rereads retain the first native revision before admission', async t => {
+test('existing source rereads retain the first native revision before admission', async t => {
   const f = await incident(t);
   await assert.rejects(observe(f.investigation, 'prepared', 'yes', { ...f.options, boundary: async point => { if (point === 'record-written') throw new WorkspaceTransactionInterruptedError(); } }));
   const source = (await f.client.listAllComplete()).items.find(item => item.type === 'Test'); assert.ok(source);
@@ -167,9 +150,9 @@ test('prepared source rereads retain the first native revision before admission'
 });
 
 test('captured readsets refuse two revisions of one source without replacing either precondition', async t => {
-  const f = await incident(t); const store = new Store(f.options); const first = await store.source(f.a);
+  const f = await incident(t); const store = new Store(f.options); const first = await store.get(f.a);
   await f.client.update(f.a, { comment: ['Peer changed a captured source'] });
-  const second = await store.source(f.a); const checkpoint = await durable(f.workspace); let called = false;
+  const second = await store.get(f.a); const checkpoint = await durable(f.workspace); let called = false;
   await assert.rejects(store.withSources([first, second], async () => { called = true; }), { code: 'conflict' });
   assert.equal(called, false); assert.deepEqual(await durable(f.workspace), checkpoint);
 });

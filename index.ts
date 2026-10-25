@@ -21,6 +21,6 @@ export const conclude = guarded(api.conclude);
 /** Typed refusals and deterministic byte-cost estimator. */
 export { HypothesisError, tokens } from './src/core.ts';
 /** Native record, prediction, witness, request, receipt and integration contracts. */
-export type { Options, ObserveOptions, Prediction, Hypothesis, Observation, Investigation, Conclusion, MatrixRow, Witness, Request, Packet, ResumeRow, Boundary } from './src/types.ts';
+export type { Options, ObserveOptions, Prediction, Hypothesis, Observation, Investigation, Conclusion, MatrixRow, Witness, Request, Packet, ResumeRow, Boundary, SourceIssue } from './src/types.ts';
 /** Activate differential investigation commands and registered item fields. */
 export default defineExtension({ name: 'pm-hypothesis', version: '2026.10.25', description: 'Durable competing explanations and observations', activate: register });

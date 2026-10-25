@@ -8,17 +8,15 @@ import { incident } from './helpers.ts';
 
 /** A source fault must leave the atomic owner and its derived matrix untouched. */
 async function sourceRefusal(t: Parameters<typeof incident>[0], mutate: (fixture: Awaited<ReturnType<typeof incident>>, id: string) => Promise<unknown>) {
-  const f = await incident(t); const before = await matrix(f.investigation, f.options);
+  const f = await incident(t); const seed = await observe(f.investigation, 'seed', 'yes', f.options);
+  const native = new Store(f.options); const before = state((await native.get(f.investigation)).hypothesis_state);
   await assert.rejects(observe(f.investigation, 'install', 'passed', { ...f.options, boundary: async point => {
-    if (point === 'record-written') {
-      const source = (await f.client.listAllComplete()).items.find(item => item.type === 'Test'); assert.ok(source);
-      await mutate(f, source.id);
-    }
+    if (point === 'record-read') { await mutate(f, seed.observation); }
   } }), { code: 'conflict' });
-  assert.deepEqual(await matrix(f.investigation, f.options), before);
+  assert.deepEqual(state((await new Store(f.options).get(f.investigation)).hypothesis_state), before);
 }
 
-test('admission refuses source edits after record-written without changing the matrix', t => sourceRefusal(t, editSource));
+test('admission refuses source edits before the atomic batch without changing the matrix', t => sourceRefusal(t, editSource));
 
 test('next-request identities round trip without display escaping', async t => {
   const f = await incident(t); const key = '<probe>';
@@ -50,18 +48,18 @@ async function editSource(f: Awaited<ReturnType<typeof incident>>, id: string) {
 }
 
 for (const operation of ['observe', 'withdraw', 'conclude']) {
-  const points = operation === 'observe' ? ['record-read', 'record-written', 'owner-read', 'admission-ready', 'owner-written', 'complete'] as const : ['owner-read', 'admission-ready', 'owner-written', 'complete'] as const;
+  const points = operation === 'observe' ? ['record-read', 'plan-ready', 'owner-read', 'admission-ready', 'owner-written', 'record-written', 'complete'] as const : ['owner-read', 'admission-ready', 'owner-written', 'complete'] as const;
   for (const point of points) for (const source of ['hypothesis', 'observation']) test(`${operation} source CAS: ${source} edit at ${point}`, async t => {
     const f = await incident(t); const seed = await observe(f.investigation, 'seed', 'yes', f.options);
-    const before = await matrix(f.investigation, f.options); let injected = false;
+    const before = state((await new Store(f.options).get(f.investigation)).hypothesis_state); let injected = false;
     const options = { ...f.options, boundary: async (boundary: Boundary) => {
       if (boundary === point && !injected) { injected = true; await editSource(f, source === 'hypothesis' ? f.a : seed.observation); }
     } };
     const action = () => operation === 'observe' ? observe(f.investigation, 'install', 'passed', options) : operation === 'withdraw' ? observe(f.investigation, '', '', { ...options, withdraw: seed.observation }) : conclude(f.investigation, f.b, 'Explicit choice', { ...options, acceptViable: [f.a, f.c] });
-    if (point === 'owner-written' || point === 'complete') {
+    if (point === 'owner-written' || point === 'record-written' || point === 'complete') {
       await action(); assert.equal((await matrix(f.investigation, f.options)).revision, before.revision + 1);
     } else {
-      await assert.rejects(action(), { code: 'conflict' }); assert.deepEqual(await matrix(f.investigation, f.options), before);
+      await assert.rejects(action(), { code: 'conflict' }); assert.deepEqual(state((await new Store(f.options).get(f.investigation)).hypothesis_state), before);
     }
     assert.equal(injected, true);
   });
@@ -76,7 +74,7 @@ test('native source writer queues through the SDK owner mutation instead of raci
     }
   } });
   assert.ok(competing); await competing; assert.equal(edited, true);
-  assert.equal((await matrix(f.investigation, f.options)).rows.find(row => row.id === f.a)?.status, 'eliminated');
+  assert.equal((await matrix(f.investigation, f.options)).rows.find(row => row.id === f.a)?.status, 'invalid');
 });
 
 test('source lock contention refuses without admission and releases acquired leases', async t => {
@@ -94,9 +92,9 @@ test('source lock contention refuses without admission and releases acquired lea
 test('hypothesis source shape and canonical owner identities are validated on resumed admission', async t => {
   const f = await incident(t);
   await f.client.update(f.a, { parent: f.b });
-  await assert.rejects(observe(f.investigation, 'x', 'y', f.options), { code: 'conflict' });
+  assert.equal((await matrix(f.investigation, f.options)).rows.find(row => row.id === f.a)?.status, 'invalid');
   await f.client.update(f.a, { parent: f.investigation, type: 'Test' });
-  await assert.rejects(observe(f.investigation, 'x', 'y', f.options), { code: 'conflict' });
+  assert.equal((await matrix(f.investigation, f.options)).rows.find(row => row.id === f.a)?.status, 'invalid');
   await f.client.create({ id: 'hyp-alias', type: 'Issue', title: 'Alias source', createMode: 'progressive' });
   const alias = await open('Alias', { ...f.options, item: 'alias' }); assert.equal(alias.investigation, 'hyp-alias');
   const h = await add('alias', 'Alias explanation', [{ observation: 'x', value: 'y' }], f.options);
@@ -118,7 +116,7 @@ test('removed observation sources refuse under the same admission precondition',
 test('acquisition inputs remain bound to the exact source when caller options change', async t => {
   const f = await incident(t);
   const options: ObserveOptions = { ...f.options, evidence: 'citation-original', when: '2026-10-25T00:00:00Z', boundary: async point => {
-    if (point === 'record-written') { options.evidence = 'citation-later'; options.when = '2026-10-26T00:00:00Z'; options.author = 'later-actor'; }
+    if (point === 'plan-ready') { options.evidence = 'citation-later'; options.when = '2026-10-26T00:00:00Z'; options.author = 'later-actor'; }
   } };
   const result = await observe(f.investigation, 'install', 'passed', options);
   const value = state((await new Store(f.options).get(f.investigation)).hypothesis_state);

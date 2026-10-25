@@ -10,8 +10,10 @@ export interface Observation { id: string; observation: string; value: string; s
 export interface Conclusion { cause: string; reason: string; accepted: string[]; revision: number }
 /** Atomic owner envelope; no cached elimination state can drift from the facts. */
 export interface Investigation { version: 1; revision: number; hypotheses: Hypothesis[]; observations: Observation[]; conclusion?: Conclusion }
+/** Current native source failure; invalid facts never become witnesses. */
+export interface SourceIssue { id: string; kind: 'hypothesis' | 'observation'; reason: 'missing' | 'type' | 'parent' | 'payload' | 'provenance' | 'withdrawn' }
 /** Deterministic seam around real SDK operations, used for crash/interleaving acceptance. */
-export type Boundary = 'record-read' | 'record-written' | 'owner-read' | 'owner-written' | 'admission-ready' | 'complete';
+export type Boundary = 'record-read' | 'plan-ready' | 'record-written' | 'owner-read' | 'owner-written' | 'admission-ready' | 'complete';
 /** Tracker binding; a host client may be injected for reads and extension discovery. */
 export interface Options {
   workspace: string;
@@ -28,10 +30,10 @@ export interface ObserveOptions extends Options { evidence?: string; how?: strin
 /** A single admitted contradictory observation, preserving prediction and provenance. */
 export interface Witness { prediction: Prediction; observation: Observation }
 /** Computed hypothesis disposition, with every witness and unobserved prediction. */
-export interface MatrixRow extends Hypothesis { status: 'eliminated' | 'viable' | 'unknown'; witnesses: Witness[]; open: Prediction[] }
+export interface MatrixRow extends Hypothesis { status: 'eliminated' | 'viable' | 'unknown' | 'invalid'; witnesses: Witness[]; open: Prediction[] }
 /** Pair split score and possible value groups; unspecified explanations are preserved. */
 export interface Request { observation: string; pairs: number; groups: { value: string; hypotheses: string[] }[]; unspecified: string[] }
 /** Bounded output with an exact count of withheld rows from a complete owner read. */
-export interface Packet<T> { investigation: string; revision: number; rows: T[]; receipt: { sourceComplete: true; returned: number; omitted: number; complete: boolean; restore: string; estimator: string }; estimatedTokens: number }
+export interface Packet<T> { investigation: string; revision: number; rows: T[]; receipt: { sourceComplete: true; returned: number; omitted: number; complete: boolean; restore: string; estimator: string; sourceIssues?: { returned: SourceIssue[]; omitted: number } }; estimatedTokens: number }
 /** Resume rows remain discriminated data, never executable instructions. */
-export type ResumeRow = { kind: 'next'; request: Request | null } | { kind: 'hypothesis'; hypothesis: Pick<MatrixRow, 'id' | 'statement' | 'status' | 'open'> } | { kind: 'witness'; hypothesis: string; observation: string; key: string; expected: string; actual: string; who: string; when: string; how: string; evidence?: string } | { kind: 'conclusion'; conclusion: Conclusion; stale: boolean };
+export type ResumeRow = { kind: 'invalid-source'; source: SourceIssue } | { kind: 'next'; request: Request | null } | { kind: 'hypothesis'; hypothesis: Pick<MatrixRow, 'id' | 'statement' | 'status' | 'open'> } | { kind: 'witness'; hypothesis: string; observation: string; key: string; expected: string; actual: string; who: string; when: string; how: string; evidence?: string } | { kind: 'conclusion'; conclusion: Conclusion; stale: boolean };

@@ -1,13 +1,18 @@
-import { acquireLockLease, certifyCompleteListResult, commitItemMutations, PmClient, readSettings, selectImportAuthor } from '@unbrained/pm-cli/sdk';
-import type { GetResult, LockLease, PmClientFullMutationOptions } from '@unbrained/pm-cli/sdk';
+import { randomUUID } from 'node:crypto';
+import { acquireLockLease, commitItemMutations, EXIT_CODE, getHistoryPath, PmCliError, PmClient, previewItemMutations, readHistorySnapshot, readSettings, selectImportAuthor } from '@unbrained/pm-cli/sdk';
+import type { BulkItemCreateMutation, BulkItemMutation, GetResult, LockLease } from '@unbrained/pm-cli/sdk';
 import type { SchemaFieldDefinition } from '@unbrained/pm-cli/sdk/authoring';
 import { data, digest, HypothesisError, inert, requireInput } from './core.ts';
-import type { Boundary, Hypothesis, Investigation, Options } from './types.ts';
+import { sourceIssues } from './records.ts';
+import type { SourceSnapshot } from './records.ts';
+import type { Boundary, Investigation, Options } from './types.ts';
 
 /** Registered scalar envelopes keep domain records on native SDK items. */
 export const FIELDS: SchemaFieldDefinition[] = ['hypothesis_state', 'hypothesis_record'].map(name => ({ name, type: 'string', optional: true }));
-/** Bind a declared explanation to its immutable native source and investigation identity. */
-export function hypothesisPayload(investigation: string, hypothesis: Hypothesis): string { return JSON.stringify({ kind: 'hypothesis', id: hypothesis.id, investigation, statement: hypothesis.statement, predictions: hypothesis.predictions }); }
+/** Immutable source plan, carrying its observed version without writing it. */
+export interface RecordPlan { snapshot: SourceSnapshot; create?: BulkItemCreateMutation }
+/** Canonical explanation encoding retained for SDK integrations. */
+export { hypothesisPayload } from './records.ts';
 /** Parse a complete owner envelope, failing closed on malformed or future records. */
 export function state(raw: unknown): Investigation {
   try {
@@ -29,21 +34,21 @@ export function state(raw: unknown): Investigation {
     return value;
   } catch { throw new HypothesisError('schema', 'Investigation field is absent or malformed', 'Open a Question or Issue with hypothesis open; restore valid hypothesis_state through pm if damaged'); }
 }
-/** Native records and owner compare-and-swap; each plan contains exactly one target. */
+/** Conditional SDK batches and current native source snapshots; no domain filesystem writes. */
 export class Store {
   /** Tracker-bound public SDK client. */
   readonly client: PmClient;
-  /** Caller-selected tracker and mutation seams. */
+  /** Immutable acquisition options for this invocation. */
   readonly options: Options;
-  /** Bind SDK access without relying on cwd or Git discovery. */
+  /** Bind SDK access without cwd or Git discovery. */
   constructor(options: Options) { this.options = { ...options }; this.client = this.options.client ?? new PmClient({ pmRoot: this.options.workspace, author: this.options.author, noExtensions: true }); }
-  /** Refuse explicitly remote effects until the host provides conditional item capabilities. */
-  writable(): void { if (this.options.backend === 'remote') throw new HypothesisError('capability', 'The host lacks a backend-owned conditional item mutation service', 'Use a filesystem tracker for writes; injected host clients can still read matrix, next and resume'); }
-  /** Resolve canonical attribution through SDK settings, never raw settings files. */
+  /** Refuse unsupported remote mutations before effects. */
+  writable(): void { if (this.options.backend === 'remote') throw new HypothesisError('capability', 'The host lacks a backend-owned conditional item mutation service', 'Use a filesystem tracker for writes; injected host clients can still read investigation context'); }
+  /** Attribute effects through SDK settings. */
   async author(): Promise<string> { return selectImportAuthor(this.options.author, (await readSettings(this.options.workspace)).author_default); }
-  /** Refuse a caller's stale owner revision before creating dependent native records. */
+  /** Require the caller's logical owner revision before planning. */
   expected(value: Investigation): void { if (this.options.expectedRevision !== undefined && this.options.expectedRevision !== value.revision) throw new HypothesisError('conflict', 'Expected investigation revision changed', 'Read matrix and retry with its current revision'); }
-  /** Expose deterministic boundaries around actual SDK reads and mutations. */
+  /** Expose boundaries before effects and after the complete batch only. */
   async boundary(point: Boundary): Promise<void> { await this.options.boundary?.(point); }
   /** Install missing package fields through the SDK; incompatible types refuse. */
   async register(): Promise<void> {
@@ -60,102 +65,133 @@ export class Store {
     }
   }
   /** Read the complete domain fields and native source revision without a child-corpus walk. */
-  async get(id: string): Promise<GetResult['item']> { return (await this.client.get(id, { fields: 'id,type,parent,created_at,updated_at,body,hypothesis_state,hypothesis_record' })).item; }
-  /** Certify discovery before deciding whether a deterministic native record exists. */
-  async exists(id: string): Promise<boolean> { return certifyCompleteListResult(await this.client.listAllComplete({ includeBody: false })).items.some(item => item.id === id); }
-  /** Materialize an immutable record, validating existing content on every retry. */
-  async record(id: string, type: string, title: string, payload: string, parent?: string): Promise<GetResult['item']> {
-    this.writable();
-    const exists = await this.exists(id);
-    const current = exists ? await this.get(id) : undefined;
-    await this.boundary('record-read');
-    if (current !== undefined) {
-      if (current.hypothesis_record !== payload || current.parent !== parent || current.type !== type) throw new HypothesisError('conflict', 'Native record changed since its intent was planned', 'Inspect the linked record and retry with a new operation identity');
-    } else {
-      await commitItemMutations({ pmRoot: this.options.workspace, author: await this.author(), transactionId: `hypothesis-record-${digest([id, payload])}`, mutations: [{ op: 'create', id, unique: { key: 'hypothesis_record', value: payload }, options: { type, title: inert(title), parent, hypothesisRecord: payload, createMode: 'progressive' } }], onTransition: this.options.onTransition, lockWaitMs: 10000 });
-    }
-    // Revalidate the dependency even when the SDK adopted an interrupted creation.
-    const actual = await this.get(id);
-    if (actual.hypothesis_record !== payload || actual.parent !== parent || actual.type !== type || current !== undefined && JSON.stringify(actual) !== JSON.stringify(current)) throw new HypothesisError('conflict', 'Native record no longer matches this operation', 'Inspect the linked record and retry with a new operation identity');
-    await this.boundary('record-written');
-    return actual;
-  }
-  /** Treat missing or unreadable source identities as failed CAS preconditions. */
-  async source(id: string): Promise<GetResult['item']> {
+  async get(id: string): Promise<GetResult['item']> { return (await this.client.get(id, { fields: 'id,type,parent,status,closed_at,created_at,updated_at,body,hypothesis_state,hypothesis_record' })).item; }
+  /** Absence is an explicit precondition; unrelated SDK failures remain failures. */
+  async optional(id: string): Promise<GetResult['item'] | undefined> {
     try { return await this.get(id); }
-    catch { throw new HypothesisError('conflict', 'An investigation source is unavailable', 'Restore or reconcile the native source before retrying admission'); }
+    catch (error) { if (error instanceof PmCliError && error.exitCode === EXIT_CODE.NOT_FOUND) return undefined; throw error; }
   }
-  /** Capture every native dependency before exposing a mutation boundary. */
-  async sources(investigation: string, value: Investigation): Promise<GetResult['item'][]> {
-    const records = await Promise.all([...value.hypotheses, ...value.observations].map(record => this.source(record.id)));
-    for (const [index, hypothesis] of value.hypotheses.entries()) {
-      const record = records[index];
-      if (record.hypothesis_record !== hypothesisPayload(investigation, hypothesis) || record.parent !== investigation || record.type !== 'Question') throw new HypothesisError('conflict', 'A hypothesis source no longer matches the declared explanation', 'Inspect and reconcile the native hypothesis record before admitting new investigation changes');
+  /** Capture every dependency, including deleted sources, without interpreting saved plans. */
+  async sources(_investigation: string, value: Investigation): Promise<SourceSnapshot[]> { return Promise.all([...value.hypotheses, ...value.observations].map(async record => ({ id: record.id, item: await this.optional(record.id) }))); }
+  /** Plan a source using its first native read; never create during preparation. */
+  async planRecord(id: string, type: string, title: string, encode: (current: GetResult['item'] | undefined) => string, parent?: string): Promise<RecordPlan> {
+    const current = await this.optional(id);
+    if (current === undefined && (await readHistorySnapshot(getHistoryPath(this.options.workspace, id), id)).raw !== null) throw new HypothesisError('conflict', 'A native source was removed after it had been recorded', 'Restore it through pm after review, withdraw the fact, or use a new operation identity; retries never undo deletion');
+    const record = encode(current);
+    await this.boundary('record-read');
+    if (current !== undefined && (current.hypothesis_record !== record || current.parent !== parent || current.type !== type || current.closed_at !== undefined)) throw new HypothesisError('conflict', 'Native source does not match this intent', 'Inspect the native record and repair or choose a new operation identity');
+    await this.boundary('plan-ready');
+    return { snapshot: { id, item: current, ...(current === undefined ? { historyAbsent: true as const } : {}) }, ...(current === undefined ? { create: { op: 'create' as const, id, unique: { key: 'hypothesis_record', value: record }, options: { type, title: inert(title), parent, hypothesisRecord: record, createMode: 'progressive' } } } : {}) };
+  }
+  /** Validate every captured version, including absence, through authoritative SDK reads. */
+  async validate(snapshots: SourceSnapshot[]): Promise<void> {
+    for (const expected of snapshots) {
+      if (JSON.stringify(await this.optional(expected.id)) !== JSON.stringify(expected.item) || expected.historyAbsent === true && (await readHistorySnapshot(getHistoryPath(this.options.workspace, expected.id), expected.id)).raw !== null) throw new HypothesisError('conflict', 'A captured owner or source revision changed', 'Inspect current sources and retry as a fresh invocation; no planned record was written');
     }
-    return records;
   }
-  /** Fence source generations and compare their full SDK revisions through the owner CAS. */
-  async withSources<T>(sources: GetResult['item'][], action: () => Promise<T>): Promise<T> {
-    const captured = new Map<string, GetResult['item']>();
-    for (const item of sources) {
-      const previous = captured.get(item.id);
-      if (previous !== undefined && JSON.stringify(previous) !== JSON.stringify(item)) throw new HypothesisError('conflict', 'A source changed between reads in this invocation', 'Inspect the source record and retry the command from a fresh snapshot');
-      captured.set(item.id, item);
+  /** Fence a read set; duplicated identities must carry the same captured version. */
+  async withSources<T>(sources: (SourceSnapshot | GetResult['item'])[], action: () => Promise<T>): Promise<T> {
+    const captured = new Map<string, SourceSnapshot>();
+    for (const source of sources) {
+      const snapshot: SourceSnapshot = 'item' in source ? source as SourceSnapshot : { id: source.id, item: source as GetResult['item'] };
+      const identity = snapshot.item?.id ?? snapshot.id;
+      const previous = captured.get(identity);
+      if (previous !== undefined && JSON.stringify(previous.item) !== JSON.stringify(snapshot.item)) throw new HypothesisError('conflict', 'A source changed between captured reads', 'Inspect the source and retry from a fresh investigation');
+      captured.set(identity, { ...snapshot, ...(previous?.historyAbsent || snapshot.historyAbsent ? { historyAbsent: true as const } : {}) });
     }
     const ordered = [...captured.values()].sort((a, b) => a.id.localeCompare(b.id, 'en'));
-    const leases: LockLease[] = []; const settings = await readSettings(this.options.workspace); let result: T;
+    const leases: LockLease[] = []; let result: T;
     try {
-      for (const item of ordered) leases.push(await acquireLockLease(this.options.workspace, item.id, settings.locks.ttl_seconds, await this.author(), false, settings.governance.force_required_for_stale_lock, 10000, { maxWaitMs: 10000 }));
-      /** Keep every source lease generation fenced until the owner mutation settles. */
+      if (this.options.backend !== 'remote') {
+        const settings = await readSettings(this.options.workspace);
+        for (const snapshot of ordered) leases.push(await acquireLockLease(this.options.workspace, snapshot.item?.id ?? snapshot.id, settings.locks.ttl_seconds, await this.author(), false, settings.governance.force_required_for_stale_lock, 10000, { maxWaitMs: 10000 }));
+      }
+      /** Retain every lease generation through validation and the complete SDK batch. */
       const fenced = async (index: number): Promise<T> => {
         if (index < leases.length) return leases[index].fence(() => fenced(index + 1));
-        for (const expected of ordered) {
-          const current = await this.source(expected.id);
-          if (JSON.stringify(current) !== JSON.stringify(expected)) throw new HypothesisError('conflict', 'An investigation source revision changed before admission', 'Inspect the source record and retry from a fresh matrix; no owner change was admitted');
-        }
-        return action();
+        await this.validate(ordered); return action();
       };
       result = await fenced(0);
     } catch (error) {
-      if (/lock/i.test(String(error))) throw new HypothesisError('conflict', 'An investigation source lock could not be retained', 'Retry after competing source writes finish');
+      if (/lock/i.test(String(error))) throw new HypothesisError('conflict', 'A source lease could not be retained', 'Retry after competing source writes finish');
       throw error;
     } finally { await Promise.all(leases.reverse().map(lease => lease.release())); }
     return result;
   }
-  /** Apply the captured owner precondition while its complete source read set is fenced. */
-  private async commit(item: GetResult['item'], value: Investigation, comment: string, sources: GetResult['item'][]): Promise<void> {
-    const encoded = JSON.stringify(value);
-    const options: PmClientFullMutationOptions = { hypothesisState: encoded, comment: [comment] };
-    try {
-      await commitItemMutations({ pmRoot: this.options.workspace, author: await this.author(), transactionId: `hypothesis-owner-${digest([item, encoded, sources])}`, mutations: [{ op: 'update', id: item.id, match: { key: 'updated_at', value: item.updated_at }, options }], onTransition: this.options.onTransition, lockWaitMs: 10000 });
-    } catch (error) {
-      if (/upsert_match_changed|no longer carries upsert key/.test(String(error))) throw new HypothesisError('conflict', 'The owner revision changed before the conditional mutation', 'Read the current investigation and retry the command; this invocation did not change the owner');
-      throw error;
-    }
+  /** Read current validity under one owner/source snapshot before deriving any decision. */
+  async view(id: string) {
+    const owner = await this.get(id); requireInput(owner.type === 'Question' || owner.type === 'Issue', 'Investigation owner must be a Question or Issue');
+    const value = state(owner.hypothesis_state); const sources = await this.sources(owner.id, value);
+    await this.boundary('owner-read');
+    return this.withSources([{ id: owner.id, item: owner }, ...sources], async () => ({ id: owner.id, value, sources, issues: sourceIssues(owner.id, value, sources) }));
   }
-  /** One invocation, one immutable owner/source read set; contention requires a fresh invocation. */
-  async mutate(id: string, change: (value: Investigation) => string | undefined, prepare?: (owner: GetResult['item']) => Promise<GetResult['item'][]>, initialize = false, capturedOwner?: GetResult['item']): Promise<{ id: string; value: Investigation }> {
-    this.writable();
-    const item = capturedOwner ?? await this.get(id);
+  /** One prevalidated SDK multi-item commit: the owner CAS is its first write. */
+  private async commit(snapshots: SourceSnapshot[], mutations: BulkItemMutation[]): Promise<void> {
+    const author = await this.author(); const transactionId = `hypothesis-owner-batch-${digest([snapshots, mutations, randomUUID()])}`;
+    const input = { pmRoot: this.options.workspace, author, transactionId, mutations };
+    await this.validate(snapshots);
+    await previewItemMutations(input);
+    // Created ids are guarded by the SDK's create/unique preconditions. Existing
+    // sources stay leased; the owner must remain free for its native SDK CAS.
+    const owner = mutations[0].id; const created = new Set(mutations.filter(mutation => mutation.op === 'create').map(mutation => mutation.id));
+    let release = (): void => undefined; let retained: Promise<unknown> = Promise.resolve();
+    try {
+      await this.validate(snapshots);
+      await commitItemMutations({ ...input, onTransition: async event => {
+        if (event.transition === 'prepared') {
+          // Acquire source leases after the SDK workspace writer. Every package
+          // batch uses this order, including recovery of a missing native source.
+          const done = new Promise<void>(resolve => { release = resolve; });
+          await new Promise<void>((ready, reject) => {
+            retained = this.withSources(snapshots.filter(snapshot => { const id = snapshot.item?.id ?? snapshot.id; return id !== owner && !created.has(id); }), async () => { ready(); await done; });
+            void retained.catch(reject);
+          });
+        }
+        await this.options.onTransition?.(event);
+        if (event.transition === 'prepared') await this.validate(snapshots);
+      }, lockWaitMs: 10000 });
+    } finally { release(); await retained; }
+  }
+  /** Fix all preconditions once; fresh creates stay in memory until the one batch. */
+  async mutate(id: string, change: (value: Investigation, sources: SourceSnapshot[]) => string | undefined, prepare?: (owner: GetResult['item'], value: Investigation) => Promise<RecordPlan[]>, initialize = false, capturedOwner?: GetResult['item']): Promise<{ id: string; value: Investigation }> {
+    this.writable(); const item = capturedOwner ?? await this.get(id);
     requireInput(item.type === 'Question' || item.type === 'Issue', 'Investigation owner must be a Question or Issue');
     const initial = initialize && item.hypothesis_state === undefined;
     const value: Investigation = initial ? { version: 1, revision: 0, hypotheses: [], observations: [] } : state(item.hypothesis_state);
-    this.expected(value);
-    // Capture ONCE, before preparation or any exposed boundary. Never refresh on contention.
-    const dependencies = await this.sources(item.id, value);
-    const sources = [...dependencies, ...await prepare?.(item) ?? []];
+    this.expected(value); const dependencies = await this.sources(item.id, value);
+    const plans = await prepare?.(item, value) ?? [];
+    const snapshots = [{ id: item.id, item }, ...dependencies, ...plans.map(plan => plan.snapshot)];
     await this.boundary('owner-read');
-    const comment = initial ? 'Opened differential investigation' : change(value);
+    await this.validate(snapshots);
+    const comment = initial ? 'Opened differential investigation' : change(value, dependencies);
+    const creates = plans.flatMap(plan => plan.create === undefined ? [] : [plan.create]);
     await this.boundary('admission-ready');
-    await this.withSources(sources, async () => {
-      const current = await this.get(item.id);
-      if (JSON.stringify(current) !== JSON.stringify(item)) throw new HypothesisError('conflict', 'The captured owner revision changed', 'Read the current investigation and retry the command; source preconditions cannot be rebased');
-      if (comment !== undefined) {
-        if (!initial) value.revision++;
-        await this.commit(item, value, comment, sources);
-      }
-    });
-    if (comment !== undefined) await this.boundary('owner-written');
+    try {
+      if (comment !== undefined || creates.length > 0) {
+        if (!initial && comment !== undefined) value.revision++;
+        const mutation: BulkItemMutation = { op: 'update', id: item.id, match: { key: 'updated_at', value: item.updated_at }, options: { hypothesisState: JSON.stringify(value), comment: [comment ?? 'Restored missing native investigation sources'] } };
+        await this.commit(snapshots, [mutation, ...creates]);
+        await this.boundary('owner-written'); if (plans.length > 0) await this.boundary('record-written');
+      } else await this.withSources(snapshots, async () => undefined);
+    } catch (error) {
+      if (error instanceof PmCliError && error.exitCode === EXIT_CODE.CONFLICT || /upsert_match_changed|no longer carries upsert key|already exists|upsert_key_conflict/.test(String(error))) throw new HypothesisError('conflict', 'A conditional batch precondition changed', 'Read the current investigation and retry with the same intent');
+      throw error;
+    }
     await this.boundary('complete'); return { id: item.id, value };
+  }
+  /** Create the investigation and its initial envelope in one native SDK creation. */
+  async initialize(id: string, title: string, create: boolean): Promise<{ id: string }> {
+    this.writable(); const item = await this.optional(id);
+    if (item !== undefined) {
+      if (create && item.hypothesis_record !== JSON.stringify({ kind: 'investigation', id, title })) throw new HypothesisError('conflict', 'Investigation source does not match this intent', 'Inspect the native investigation or use a new operation identity');
+      return this.mutate(item.id, () => undefined, undefined, true, item);
+    }
+    requireInput(create, 'The selected native investigation does not exist');
+    if ((await readHistorySnapshot(getHistoryPath(this.options.workspace, id), id)).raw !== null) throw new HypothesisError('conflict', 'The investigation identity was deleted', 'Restore the native investigation through pm or use a new operation identity');
+    this.expected({ version: 1, revision: 0, hypotheses: [], observations: [] });
+    await this.boundary('record-read'); await this.boundary('plan-ready'); await this.boundary('owner-read'); await this.boundary('admission-ready');
+    const record = JSON.stringify({ kind: 'investigation', id, title });
+    await this.commit([{ id, item, historyAbsent: true }], [{ op: 'create', id, unique: { key: 'hypothesis_record', value: record }, options: { type: 'Question', title: inert(title), hypothesisRecord: record, hypothesisState: JSON.stringify({ version: 1, revision: 0, hypotheses: [], observations: [] }), comment: ['Opened differential investigation'], createMode: 'progressive' } }]);
+    await this.boundary('owner-written'); await this.boundary('record-written'); await this.boundary('complete'); return { id };
   }
 }

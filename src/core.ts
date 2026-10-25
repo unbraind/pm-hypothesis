@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { WorkspaceTransactionInterruptedError } from '@unbrained/pm-cli/sdk';
 import { encode } from '@toon-format/toon';
-import type { Packet } from './types.ts';
+import type { Packet, SourceIssue } from './types.ts';
 
 /** Typed refusal shared by SDK and CLI, with safe diagnostics and a concrete remedy. */
 export class HypothesisError extends Error {
@@ -45,11 +45,13 @@ export function tokens(value: unknown): number { return Math.ceil(Math.max(Buffe
 /** Stabilize the self-inclusive byte estimate before enforcing the bound. */
 function account<T>(value: Packet<T>): Packet<T> { let count = tokens(value); while (value.estimatedTokens !== count) { value.estimatedTokens = count; count = tokens(value); } return value; }
 /** Include a deterministic prefix of rows and an omission receipt in the requested budget. */
-export function packet<T>(investigation: string, revision: number, rows: T[], budget: number, restore: string): Packet<T> {
+export function packet<T>(investigation: string, revision: number, rows: T[], budget: number, restore: string, issues: SourceIssue[] = []): Packet<T> {
   requireInput(Number.isSafeInteger(budget) && budget > 0 && budget <= 1_000_000, 'Budget must be an integer from 1 to 1000000');
-  const make = (selected: T[]): Packet<T> => account({ investigation, revision, rows: selected, receipt: { sourceComplete: true, returned: selected.length, omitted: rows.length - selected.length, complete: selected.length === rows.length, restore, estimator: 'ceil(max(json,toon)_utf8_bytes/4)' }, estimatedTokens: 0 });
+  let selectedIssues: SourceIssue[] = [];
+  const make = (selected: T[]): Packet<T> => account({ investigation, revision, rows: selected, receipt: { sourceComplete: true, returned: selected.length, omitted: rows.length - selected.length, complete: selected.length === rows.length && selectedIssues.length === issues.length, restore, ...(issues.length > 0 ? { sourceIssues: { returned: selectedIssues, omitted: issues.length - selectedIssues.length } } : {}), estimator: 'ceil(max(json,toon)_utf8_bytes/4)' }, estimatedTokens: 0 });
   let result = make([]);
   if (result.estimatedTokens > budget) throw new HypothesisError('budget', 'Budget cannot hold the omission receipt', 'Increase --budget');
+  for (const issue of issues) { selectedIssues = [...selectedIssues, issue]; const next = make([]); if (next.estimatedTokens > budget) { selectedIssues = selectedIssues.slice(0, -1); break; } result = next; }
   for (const row of rows) { const next = make([...result.rows, row]); if (next.estimatedTokens > budget) break; result = next; }
   return result;
 }
