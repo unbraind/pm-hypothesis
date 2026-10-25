@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { commitWorkspaceTransaction, WorkspaceTransactionInterruptedError } from '@unbrained/pm-cli/sdk';
 import { conclude, matrix, nextRequest, observe, open, resumePacket, show } from '../index.ts';
 import { join } from 'node:path';
-import { cp, rm } from 'node:fs/promises';
+import { cp, mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { digest, packet } from '../src/core.ts';
 import { Store, state } from '../src/store.ts';
 import { incident, durable } from './helpers.ts';
@@ -164,4 +164,15 @@ test('recorded conclusions cannot claim a missing cause, lost acknowledgments or
   const current = state((await store.get(f.investigation)).hypothesis_state); assert.ok(current.conclusion); current.conclusion.cause = f.a; current.conclusion.revision = current.revision;
   const update = { hypothesisState: JSON.stringify(current), message: 'Synthetic eliminated decision' }; await f.client.update(f.investigation, update);
   assert.equal((await show(f.investigation, f.options)).conclusionValid, false);
+});
+
+
+test('managed extension executable links do not prevent conditional SDK batches', async t => {
+  const f = await incident(t); const bin = join(f.workspace, 'extensions', 'fixture', 'node_modules', '.bin'); await mkdir(bin, { recursive: true });
+  await writeFile(join(bin, 'tool.js'), 'Synthetic managed dependency'); await symlink('tool.js', join(bin, 'tool'));
+  await assert.doesNotReject(async () => {
+    const fact = await observe(f.investigation, 'install', 'passed', f.options);
+    const result = await matrix(f.investigation, f.options); assert.equal(result.rows.find(row => row.id === f.a)?.status, 'eliminated');
+    assert.equal(result.rows.find(row => row.id === f.a)?.witnesses[0].observation.id, fact.observation);
+  });
 });

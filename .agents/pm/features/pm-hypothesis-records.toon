@@ -6,17 +6,20 @@ status: in_progress
 priority: 2
 tags: []
 created_at: "2026-10-25T08:12:42.151Z"
-updated_at: "2026-10-25T21:38:56.358Z"
+updated_at: "2026-10-25T22:04:35.860Z"
 author: codex-agent
 acceptance_criteria: "Native Question investigations, linked hypotheses and Test facts with provenance and registered schema; SDK-only storage without git."
 parent: pm-hypothesis-build
-comments[6]{created_at,author,text}:
+comments[9]{created_at,author,text}:
   "2026-10-25T08:18:39.486Z",codex-agent,"Implemented registered hypothesis_state and immutable hypothesis_record fields, SDK-registered Question/Test types, native parent links and audit comments. Minimal SDK trackers omit Question/Test, so open registers them explicitly. Reads certify native record discovery and load the complete atomic owner."
   "2026-10-25T08:38:15.849Z",codex-agent,"Cross-investigation regression was red against the implementation commit: the global SDK unique-key guard conflated equal source payloads. Source envelopes now include their native id and owner, so identical titles with different operation identities, equal explanations and equal facts stay independent. The dedicated real-tracker scenario is green; no prior records or histories were rewritten."
   "2026-10-25T15:07:25.299Z",codex-agent,"Acquisition options are copied before async boundaries, and Store owns a copy of workspace/author/revision options. A record-written callback changing the caller evidence, time and actor cannot change the payload admitted from that source. The real SDK regression compares admitted provenance against the native source envelope. Reverting the acquisition snapshot fails this assertion."
   "2026-10-25T20:35:33.688Z",codex-agent,"Every public decision read now obtains an SDK owner/source snapshot and validates native type, parent, immutable payload schema, provenance and withdrawal/closure. Invalid observations cannot witness elimination, invalid hypotheses are explicit matrix rows and excluded from next requests, and active invalid sources refuse conclusion. Resume and show expose validity issues and invalidate historical conclusions whose sources no longer hold. No read repairs or rewrites native records."
   "2026-10-25T21:29:17.963Z",codex-agent,"Behavioral revert proof: npm run test:revert passed all 12 negative proofs in a disposable source copy. Reinstating create-before-validate makes the combined owner/source edit at record-read leave a fresh Test/history and fail durable byte equality. Bypassing current native source validation makes edited admitted provenance allow conclusion and fail the fixed case. Restoring owner retries that refresh captured sources fails the existing invocation-CAS regression. Each proof changes implementation only, requires a failing targeted regression, restores exact source bytes and removes its scratch copy. The two round-3 cases also failed on the prior committed implementation and pass with this change. Other retained proofs cover contradiction, withdrawal, survivor acknowledgment, discrimination, budgets, expected revisions, authoritative source reads, identity round trips and conclusion restoration."
   "2026-10-25T21:33:21.912Z",codex-agent,"Recorded targeted execution through pm test --run --only-last passes 15/15 tests, zero failures or skips: both fixed review cases plus all current source-schema, provenance, type, parent, withdrawal, closure, deletion, identity-alias, replay, owner-first interruption, history-absence, workspace-contention, omission and conclusion-validity cases. Native host restoration tests pass 3/3 and return invalid support, historical conclusions and the actual next request from each advertised show command. The 100-sample elimination-equivalence property now persists real native source records instead of dangling owner-only fixtures. Existing native SDK crash/interleaving suites pass 118/118."
+  "2026-10-25T21:56:43.697Z",codex-agent,"Latest Node 22 CI passes all 1528 tests and 100/100/100/100 coverage across 18 source files, including the complete corrected 1312-case matrix. Packed npm/npx and Bun/bunx acceptance then fail at hypothesis open with an SDK refusal. Reproducing using an isolated packed consumer and inspecting the underlying exception only in disposable local diagnostics; public refusals remain sanitized. All other Node 22 release steps pass. No threshold or test scope will be reduced."
+  "2026-10-25T22:00:09.008Z",codex-agent,"Packed root cause: SDK previewItemMutations rejects normal executable symlinks under managed extension dependencies with transaction_preview_non_regular_file. It has no public scope/exclusion option. Replaced full-tracker cloning with public resolveTransactionSchema, resolveRuntimeFieldRegistry and parseItemMutationBatch for schema-aware shape/field routing; all captured target checks, prepared-time revalidation, fenced sources and the single atomic commit remain. No links are followed, removed or modified. A real native tracker with a synthetic managed executable link fails before the change and passes after it; both fixed round-3 cases also remain green. This SDK preview gap will be reported in the final handoff, without upstream writes or a dependency bump."
+  "2026-10-25T22:04:34.554Z",codex-agent,"Compatibility verification: npm run test:install passes 2/2 packed journeys (npm/npx and Bun/bunx), with no failure/skip; both execute open/add/observe/matrix/next/resume/conclude/withdraw plus in-process SDK reads from the tarball in nongit consumers. The tracker-linked managed-link and fixed-review regression command passes 3/3. The final disposable-copy revert run passes all 13 proofs, including restoration of the SDK whole-tracker preview, which fails the managed-link regression, and the create-before-validate, edited-provenance and source-dropping retry reversions. Exact implementation bytes are restored after every negative test and the scratch copy is removed. Typecheck, lint, zero duplication (0/3434 lines) and 69 documented declarations across 18 sources pass. New native batch validation changes only schema-aware planning; all owner/source CAS and atomic commit fences remain."
 files[10]{path,scope}:
   index.ts,project
   src/hypothesis.ts,project
@@ -28,7 +31,7 @@ files[10]{path,scope}:
   test/review-classes.test.ts,project
   test/source-model.test.ts,project
   test/source-validity.test.ts,project
-tests[3]:
+tests[4]:
   - command: "node --test --test-name-pattern=\"open attaches\" test/hypothesis.test.ts"
     scope: project
     provenance:
@@ -49,6 +52,13 @@ tests[3]:
     provenance:
       author: codex-agent
       created_at: "2026-10-25T21:02:42.542Z"
+      source_kind: local_mutation
+      source_ref: feat/hypothesis
+  - command: "node --test --test-name-pattern='^managed extension executable|^atomic command:|^current source invariants:' test/source-validity.test.ts test/atomic-sources.test.ts"
+    scope: project
+    provenance:
+      author: codex-agent
+      created_at: "2026-10-25T22:00:12.272Z"
       source_kind: local_mutation
       source_ref: feat/hypothesis
 docs[3]{path,scope}:

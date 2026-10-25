@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 
 /** Behavioral reversions replace only the named implementation branch, never test assertions. */
 const proofs = [
+  { file: 'src/store.ts', label: 'managed installation: restore whole-tracker preview', before: '    const schema = await resolveTransactionSchema(this.options.workspace, await readSettings(this.options.workspace));', after: '    await previewItemMutations({ pmRoot: this.options.workspace, author, transactionId, mutations });\n    const schema = await resolveTransactionSchema(this.options.workspace, await readSettings(this.options.workspace));', preview: true, test: 'test/source-validity.test.ts', pattern: '^managed extension executable' },
   { file: 'src/store.ts', label: 'atomic command: recreate the create-before-validate sequence', before: "const snapshots = [{ id: item.id, item }, ...dependencies, ...plans.map(plan => plan.snapshot)];", after: "const snapshots = [{ id: item.id, item }, ...dependencies, ...plans.map(plan => plan.snapshot)];\n    for (const plan of plans) if (plan.create !== undefined) { await commitItemMutations({ pmRoot: this.options.workspace, author: await this.author(), transactionId: `revert-precreate-${digest([plan.create])}`, mutations: [plan.create] }); plan.snapshot.item = await this.get(plan.snapshot.id); delete plan.snapshot.historyAbsent; delete plan.create; }", test: 'test/atomic-sources.test.ts', pattern: '^atomic command:' },
   { file: 'src/records.ts', label: 'source validity: trust edited native payloads', before: "export function sourceIssues(investigation: string, value: Investigation, sources: SourceSnapshot[]): SourceIssue[] {", after: "export function sourceIssues(investigation: string, value: Investigation, sources: SourceSnapshot[]): SourceIssue[] { return [];", test: 'test/atomic-sources.test.ts', pattern: '^current source invariants:' },
   { file: 'src/store.ts', label: 'invocation CAS: restore owner retry that refreshes source preconditions', before: "await this.boundary('owner-read');\n    await this.validate(snapshots);", after: "await this.boundary('owner-read');\n    if (JSON.stringify(await this.get(id)) !== JSON.stringify(item)) return this.mutate(id, change, prepare, initialize);\n    await this.validate(snapshots);", test: 'test/cas-invocation.test.ts', pattern: '^invocation CAS:' },
@@ -21,7 +22,8 @@ const proofs = [
 for (const proof of proofs) {
   const path = resolve(import.meta.dirname, '..', proof.file); const original = readFileSync(path, 'utf8'); assert.ok(original.includes(proof.before));
   try {
-    writeFileSync(path, original.replace(proof.before, proof.after));
+    const edited = original.replace(proof.before, proof.after);
+    writeFileSync(path, 'preview' in proof ? edited.replace('parseItemMutationBatch,', 'previewItemMutations, parseItemMutationBatch,') : edited);
     const result = spawnSync(process.execPath, ['--test', `--test-name-pattern=${proof.pattern}`, proof.test], { cwd: resolve(import.meta.dirname, '..'), encoding: 'utf8', timeout: 180000 });
     assert.equal(result.error, undefined); assert.equal(result.status, 1, `${proof.label} must fail behaviorally`); assert.match(result.stdout + result.stderr, /AssertionError|Missing expected rejection/);
     console.log(`REVERT PROVED: ${proof.label}`);

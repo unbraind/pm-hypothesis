@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { acquireLockLease, commitItemMutations, EXIT_CODE, getHistoryPath, PmCliError, PmClient, previewItemMutations, readHistorySnapshot, readSettings, selectImportAuthor } from '@unbrained/pm-cli/sdk';
+import { acquireLockLease, commitItemMutations, EXIT_CODE, getHistoryPath, PmCliError, PmClient, parseItemMutationBatch, readHistorySnapshot, readSettings, resolveRuntimeFieldRegistry, resolveTransactionSchema, selectImportAuthor } from '@unbrained/pm-cli/sdk';
 import type { BulkItemCreateMutation, BulkItemMutation, GetResult, LockLease } from '@unbrained/pm-cli/sdk';
 import type { SchemaFieldDefinition } from '@unbrained/pm-cli/sdk/authoring';
 import { data, digest, HypothesisError, inert, requireInput } from './core.ts';
@@ -128,9 +128,9 @@ export class Store {
   /** One prevalidated SDK multi-item commit: the owner CAS is its first write. */
   private async commit(snapshots: SourceSnapshot[], mutations: BulkItemMutation[]): Promise<void> {
     const author = await this.author(); const transactionId = `hypothesis-owner-batch-${digest([snapshots, mutations, randomUUID()])}`;
-    const input = { pmRoot: this.options.workspace, author, transactionId, mutations };
+    const schema = await resolveTransactionSchema(this.options.workspace, await readSettings(this.options.workspace));
+    const input = { pmRoot: this.options.workspace, author, transactionId, mutations: parseItemMutationBatch(JSON.stringify(mutations), { runtimeFields: resolveRuntimeFieldRegistry(schema.schema).definitions }) };
     await this.validate(snapshots);
-    await previewItemMutations(input);
     // Created ids are guarded by the SDK's create/unique preconditions. Existing
     // sources stay leased; the owner must remain free for its native SDK CAS.
     const owner = mutations[0].id; const created = new Set(mutations.filter(mutation => mutation.op === 'create').map(mutation => mutation.id));
