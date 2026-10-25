@@ -1,0 +1,15 @@
+id: pm-hypothesis-safety
+title: Safety investigation context
+description: ""
+type: Feature
+status: in_progress
+priority: 2
+tags: []
+created_at: "2026-10-25T08:13:12.226Z"
+updated_at: "2026-10-25T08:13:15.902Z"
+assignee: codex-agent
+claim_principal: codex-agent
+author: codex-agent
+acceptance_criteria: "Inert untrusted data, typed remedies, optional host-discovered citations, gitless packed npm/Bun/npx/bunx acceptance, complete gates and public-data measurement."
+parent: pm-hypothesis-build
+body: ""

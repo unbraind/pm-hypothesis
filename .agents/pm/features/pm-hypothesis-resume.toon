@@ -1,0 +1,15 @@
+id: pm-hypothesis-resume
+title: Resume investigation context
+description: ""
+type: Feature
+status: in_progress
+priority: 2
+tags: []
+created_at: "2026-10-25T08:13:00.860Z"
+updated_at: "2026-10-25T08:13:05.627Z"
+assignee: codex-agent
+claim_principal: codex-agent
+author: codex-agent
+acceptance_criteria: "Viable and unknown hypotheses, witnesses, open predictions and next request within the requested token budget including omission receipt."
+parent: pm-hypothesis-build
+body: ""

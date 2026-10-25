@@ -1,0 +1,16 @@
+id: pm-hypothesis-build
+title: Build durable differential investigation context
+description: ""
+type: Epic
+status: in_progress
+priority: 2
+tags: []
+created_at: "2026-10-25T08:11:53.401Z"
+updated_at: "2026-10-25T08:11:58.515Z"
+assignee: codex-agent
+claim_principal: codex-agent
+author: codex-agent
+acceptance_criteria: "Six features provide native investigation context, exact contradiction witnesses, bounded resumes, conditional recovery, and safe packed commands with all release gates passing."
+comments[1]{created_at,author,text}:
+  "2026-10-25T08:11:58.514Z",codex-agent,"Implements companion item pm-cli-website-f4zp; companion read only. Work stays local, release disabled, main scaffold only. Plan: native records and conditional owner revision; derived matrices; deterministic requests; bounded packets; exhaustive interleaving/crash tests and public incident proof."
+body: ""

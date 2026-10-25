@@ -1,0 +1,15 @@
+id: pm-hypothesis-matrix
+title: Matrix investigation context
+description: ""
+type: Feature
+status: in_progress
+priority: 2
+tags: []
+created_at: "2026-10-25T08:12:48.051Z"
+updated_at: "2026-10-25T08:12:51.893Z"
+assignee: codex-agent
+claim_principal: codex-agent
+author: codex-agent
+acceptance_criteria: Exact admitted-contradiction witnesses; missing data never eliminates; withdrawal restores only affected explanations; randomized equivalence proof.
+parent: pm-hypothesis-build
+body: ""

@@ -1,0 +1,15 @@
+id: pm-hypothesis-records
+title: Records investigation context
+description: ""
+type: Feature
+status: in_progress
+priority: 2
+tags: []
+created_at: "2026-10-25T08:12:42.151Z"
+updated_at: "2026-10-25T08:12:46.362Z"
+assignee: codex-agent
+claim_principal: codex-agent
+author: codex-agent
+acceptance_criteria: "Native Question investigations, linked hypotheses and Test facts with provenance and registered schema; SDK-only storage without git."
+parent: pm-hypothesis-build
+body: ""

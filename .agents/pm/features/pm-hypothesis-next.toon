@@ -1,0 +1,15 @@
+id: pm-hypothesis-next
+title: Next investigation context
+description: ""
+type: Feature
+status: in_progress
+priority: 2
+tags: []
+created_at: "2026-10-25T08:12:54.390Z"
+updated_at: "2026-10-25T08:12:59.056Z"
+assignee: codex-agent
+claim_principal: codex-agent
+author: codex-agent
+acceptance_criteria: "Deterministic maximum viable pair splits, smallest request tie-break and explicit split groups; never execute diagnostics."
+parent: pm-hypothesis-build
+body: ""

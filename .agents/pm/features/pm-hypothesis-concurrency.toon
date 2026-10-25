@@ -1,0 +1,15 @@
+id: pm-hypothesis-concurrency
+title: Concurrency investigation context
+description: ""
+type: Feature
+status: in_progress
+priority: 2
+tags: []
+created_at: "2026-10-25T08:13:07.271Z"
+updated_at: "2026-10-25T08:13:10.532Z"
+assignee: codex-agent
+claim_principal: codex-agent
+author: codex-agent
+acceptance_criteria: "Every write revalidates current expected revision; retry and crash convergence without duplicates; interleavings at every observation, withdrawal and conclusion boundary."
+parent: pm-hypothesis-build
+body: ""

@@ -1,0 +1,13 @@
+{
+  "name": "pm-hypothesis",
+  "version": "2026.10.25",
+  "description": "Competing explanations, predictions and observation witnesses as durable investigation context",
+  "author": "@unbraind",
+  "entry": "./dist/index.js",
+  "pm_min_version": "2026.10.24",
+  "priority": 90,
+  "capabilities": [
+    "commands",
+    "schema"
+  ]
+}
