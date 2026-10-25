@@ -14,7 +14,7 @@ function cli(root: string, workspace: string, args: string[]) { return spawnSync
 
 test('native gitless host: seven commands, TOON/JSON, repeated predictions, withdrawal and bounded resumes', async t => {
   const f = await incident(t); await extension(f.workspace);
-  const activation = await activateExtensionForTest(hypothesis, { capabilities: ['commands', 'schema'] }); assert.equal(activation.failed.length, 0);
+  const activation = await activateExtensionForTest(hypothesis, { capabilities: ['commands', 'schema', 'renderers'] }); assert.equal(activation.failed.length, 0);
   const help = cli(f.root, f.workspace, ['--help']); assert.equal(help.status, 0, help.stderr);
   for (const command of ['open', 'add', 'observe', 'matrix', 'next', 'resume', 'conclude']) assert.ok(help.stdout.includes(command));
   const opened = cli(f.root, f.workspace, ['open', 'Native incident', '--json']); assert.equal(opened.status, 0, opened.stderr);

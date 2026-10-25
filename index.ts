@@ -14,6 +14,8 @@ export const matrix = guarded(api.matrix);
 export const nextRequest = guarded(api.nextRequest);
 /** Build bounded investigation handoff context with an omission receipt. */
 export const resumePacket = guarded(api.resumePacket);
+/** Restore complete matrix, source facts and conclusion without packet omissions. */
+export const show = guarded(api.show);
 /** Record an explicit revision-bound conclusion and acknowledged alternatives. */
 export const conclude = guarded(api.conclude);
 /** Typed refusals and deterministic byte-cost estimator. */

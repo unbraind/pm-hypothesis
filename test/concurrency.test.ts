@@ -33,7 +33,7 @@ async function convergence(f: Awaited<ReturnType<typeof setup>>) {
 describe('conditional recovery boundaries', { concurrency: 4 }, () => {
 const operations = ['observe', 'withdraw', 'conclude'];
 for (const operation of operations) {
-  const boundaries: Boundary[] = operation === 'observe' ? ['record-read', 'record-written', 'owner-read', 'owner-written', 'complete'] : ['owner-read', 'owner-written', 'complete'];
+  const boundaries: Boundary[] = operation === 'observe' ? ['record-read', 'record-written', 'owner-read', 'admission-ready', 'owner-written', 'complete'] : ['owner-read', 'admission-ready', 'owner-written', 'complete'];
   for (const boundary of boundaries) {
     test(`${operation}: interleaving at ${boundary} preserves both writers`, async t => {
       const f = await setup(t, operation); let injected = false;

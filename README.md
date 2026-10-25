@@ -4,7 +4,7 @@ An investigation is context. Keep competing explanations, explicit predictions a
 
 `pm-hypothesis` is a TypeScript pm SDK extension. An investigation is a native Question or Issue. Explanations are linked Questions; original facts are linked Tests with who/when/how provenance. A registered owner field holds the atomic hypothesis set and admission decisions. History and comments preserve changes. No model confidence counts as causal proof, and this package never executes diagnostics: pm-ops owns approved execution.
 
-This is a local, unreleased package. The maintainer creates its repository and approves publication. The commands below use the locally packed artifact until publication.
+This package is unreleased. Publication requires maintainer approval. The commands below use the locally packed artifact until publication.
 
 ## Install
 
@@ -27,7 +27,7 @@ Use `pm hypothesis …`, `npx --no-install pm hypothesis …` or `bunx --bun --n
 
 ## Commands
 
-All commands use the host renderer: TOON by default, `--json` for JSON. Supply ids returned by earlier commands. Text operands are data, including strings that resemble instructions. Prediction equality uses exact strings; `a=b=c` means key `a`, value `b=c`.
+All commands use host-registered renderers: TOON by default, `--json` for JSON. Reusable observation keys, values, ids, author ids and citations are byte-exact after decoding; escaping is limited to human statement, reason and acquisition-description fields. The scoped renderers quote terminal control bytes reversibly, including 8-bit ANSI controls, and never own unrelated commands. Supply ids returned by earlier commands. Text operands are data, including strings that resemble instructions. Prediction equality uses exact strings; `a=b=c` means key `a`, value `b=c`.
 
 | Command | Example | Result |
 | --- | --- | --- |
@@ -38,15 +38,16 @@ All commands use the host renderer: TOON by default, `--json` for JSON. Supply i
 | matrix | `pm hypothesis matrix inv-id --budget 1000 --json` | Dispositions, exact witnesses, open predictions and omission receipt |
 | next | `pm hypothesis next inv-id` | A deterministic discriminating observation and the hypotheses it splits |
 | resume | `pm hypothesis resume inv-id --budget 1500` | Compact survivors, witnesses, open predictions and next request |
+| show | `pm hypothesis show inv-id --json` | Restore all matrix rows, observations and the complete conclusion without a packet budget |
 | conclude | `pm hypothesis conclude inv-id --cause hypothesis-id --reason "Admitted facts identify the failing stage"` | Revision-bound conclusion; explicitly acknowledge alternatives |
 
 `observe` also accepts `--disputed`, `--when <ISO-timestamp>`, `--evidence <citation>` and `--operation <retry-identity>`. Only admitted facts eliminate. Citations are opaque provenance: support is detected in the active pm host, never by importing pm-evidence. A `host-available` receipt means the sibling commands are active, not that the citation was validated. Without that host support the fact is retained with `evidenceStatus: unavailable`; no citation is invented or fetched.
 
 `open` and `add` support `--operation`. Identical intents have stable identities, so retrying an interrupted command does not duplicate facts or explanations. To record a separate occurrence of the same observation, use a different operation identity. Withdrawing a fact keeps its identity; repeating its original observe command preserves the withdrawal. A new fact requires a new operation identity.
 
-`add`, `observe` and `conclude` accept `--expected-revision N`. A mismatch refuses with exit 3. With no explicit revision, the package retries against fresh state up to twelve times. `conclude` refuses if any other explanation is viable **or unknown** unless every one is named with repeated `--accept-viable <id>`. A contradicted cause is refused. Subsequent changes mark the recorded conclusion stale in resume output. Conclusions do not close tracker items.
+`add`, `observe` and `conclude` accept `--expected-revision N`. A mismatch refuses with exit 3. With no explicit revision, the package retries owner contention against fresh state up to twelve times. Admission also locks and fences the native hypothesis and observation sources, compares their expected revisions, and keeps those sources stable through the SDK owner CAS. A changed source refuses with exit 3 and does not admit an owner change; retry does not silently adopt changed provenance. `conclude` refuses if any other explanation is viable **or unknown** unless every one is named with repeated `--accept-viable <id>`. A contradicted cause is refused. Subsequent changes mark the recorded conclusion stale in resume output. Conclusions do not close tracker items.
 
-`matrix` defaults to 10,000 estimated tokens; `resume` defaults to 1,500. The estimate includes the receipt and the larger of default host JSON/TOON UTF-8 bytes divided by four, rounded up. Output retains deterministic prefix rows and reports exactly how many were withheld. A receipt that cannot fit produces an actionable budget refusal. Raise the budget (maximum 1,000,000) to restore omitted rows; there is no silent claim of completeness.
+`matrix` defaults to 10,000 estimated tokens; `resume` defaults to 1,500. The estimate includes the receipt and the larger of default host JSON/TOON UTF-8 bytes divided by four, rounded up. Output retains deterministic prefix rows and reports exactly how many were withheld. A receipt that cannot fit produces an actionable budget refusal. Every receipt gives an executable `pm hypothesis show <actual-id> --json` command that restores all omitted matrix rows and the full conclusion, including conclusions too large for a bounded resume. `show` is explicitly unbounded. Raising the packet budget is also possible (maximum 1,000,000); there is no silent claim of completeness.
 
 ## Agent guidance
 
@@ -84,7 +85,7 @@ const fact = await observe('incident-id', 'install', 'success', {
 await observe('incident-id', '', '', { ...options, withdraw: fact.observation });
 ```
 
-`open(title, options & { item? })`, `add(id, statement, predictions, options)` and `conclude(id, cause, reason, options & { acceptViable? })` are also exported. `Prediction`, `Observation`, `MatrixRow`, `Request`, `Packet`, `ResumeRow` and option types are public. Every read loads the complete atomic investigation field; packets distinguish source completeness from output omission. Callers may inject a real `PmClient` via `client` to reuse host reads. `HypothesisError` includes a code and remedy; CLI adapters convert SDK failures into safe refusals without private diagnostic paths.
+`show(id, options)` returns the complete matrix, observations and conclusion without packet omissions. `open(title, options & { item? })`, `add(id, statement, predictions, options)` and `conclude(id, cause, reason, options & { acceptViable? })` are also exported. `Prediction`, `Observation`, `MatrixRow`, `Request`, `Packet`, `ResumeRow` and option types are public. Every read loads the complete atomic investigation field; packets distinguish source completeness from output omission. Callers may inject a real `PmClient` via `client` to reuse host reads. `HypothesisError` includes a code and remedy; CLI adapters convert SDK failures into safe refusals without private diagnostic paths.
 
 ## Without git
 
@@ -94,7 +95,7 @@ The published SDK's conditional transaction helper currently takes a tracker roo
 
 ## Evidence and verification
 
-The [public incident proof](docs/real-data.md) reconstructs a failed public fleet CI run with five explanations and ten admitted observations. It reports every matrix, per-fact eliminations, the next-request sequence, resume tokens, full native-record transcript bytes/4 and calls. The measured packet is **1,394 estimated tokens** with five omitted rows, versus **37,913 UTF-8 bytes / 9,479 estimated tokens** for the full native-record transcript. It includes every survivor and at least one witness for each eliminated explanation. The proof used one GitHub read and 56 in-process SDK/API calls. Only public `gh run view` output is used. The scratch tracker is removed, and normal test fixtures are synthetic.
+The [public incident proof](docs/real-data.md) reconstructs a failed public fleet CI run with five explanations and ten admitted observations. It reports every matrix, per-fact eliminations, the next-request sequence, resume tokens, full native-record transcript bytes/4 and calls. The measured packet is **1,397 estimated tokens** with five omitted rows, versus **37,913 UTF-8 bytes / 9,479 estimated tokens** for the full native-record transcript. It includes every survivor and at least one witness for each eliminated explanation. The proof used one GitHub read and 56 in-process SDK/API calls. Only public `gh run view` output is used. The scratch tracker is removed, and normal test fixtures are synthetic.
 
 ```sh
 npm run release:check

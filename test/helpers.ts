@@ -30,7 +30,7 @@ export async function incident(t: TestContext) {
 /** Native discovery fixture uses this package's real extension implementation. */
 export async function extension(workspace: string) {
   const dir = join(workspace, 'extensions', 'pm-hypothesis'); await mkdir(dir, { recursive: true });
-  await writeFile(join(dir, 'manifest.json'), JSON.stringify({ name: 'pm-hypothesis', version: '2026.10.25', entry: 'entry.js', capabilities: ['commands', 'schema'] }));
+  await writeFile(join(dir, 'manifest.json'), JSON.stringify({ name: 'pm-hypothesis', version: '2026.10.25', entry: 'entry.js', capabilities: ['commands', 'schema', 'renderers'] }));
   await writeFile(join(dir, 'entry.js'), `export { default } from ${JSON.stringify(new URL('../index.ts', import.meta.url).href)};\n`);
 }
 /** Fence ancestor discovery and remove git from the native command path. */

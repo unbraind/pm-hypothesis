@@ -25,7 +25,7 @@ Five explicit explanations, ten observations, immutable native fact provenance a
 
 Next requests, initially and after each observation: health22 → health22 → health22 → health22 → identity22 → npm22 → none → none → none → none → none. These are suggestions only; nothing executed them. Pair scores use declared equality predictions and preserve unspecified causes.
 
-Resume: **1394 estimated tokens**, 11 rows, 5 omitted rows, sourceComplete=true. Full investigation transcript: **37913 UTF-8 bytes / 9479 estimated tokens**, including the public run metadata and 16 complete native records. The transcript is measured once, without repeated matrix output or SDK transport wrappers. Both estimates use bytes/4; the resume uses the larger JSON/TOON representation including its receipt.
+Resume: **1397 estimated tokens**, 11 rows, 5 omitted rows, sourceComplete=true. Full investigation transcript: **37913 UTF-8 bytes / 9479 estimated tokens**, including the public run metadata and 16 complete native records. The transcript is measured once, without repeated matrix output or SDK transport wrappers. Both estimates use bytes/4; the resume uses the larger JSON/TOON representation including its receipt.
 
 Calls: **1 GitHub read**, **56 public SDK/API calls** (init/open/add/observe/matrix/next/resume and transcript reads). These are in-process calls, not model or remote-backend round trips. Internal SDK filesystem/schema operations are not counted.
 

@@ -1,11 +1,13 @@
-import { certifyCompleteListResult, commitItemMutations, PmClient, readSettings, selectImportAuthor } from '@unbrained/pm-cli/sdk';
-import type { GetResult, PmClientFullMutationOptions } from '@unbrained/pm-cli/sdk';
+import { acquireLockLease, certifyCompleteListResult, commitItemMutations, PmClient, readSettings, selectImportAuthor } from '@unbrained/pm-cli/sdk';
+import type { GetResult, LockLease, PmClientFullMutationOptions } from '@unbrained/pm-cli/sdk';
 import type { SchemaFieldDefinition } from '@unbrained/pm-cli/sdk/authoring';
 import { data, digest, HypothesisError, inert, requireInput } from './core.ts';
-import type { Boundary, Investigation, Options } from './types.ts';
+import type { Boundary, Hypothesis, Investigation, Options } from './types.ts';
 
 /** Registered scalar envelopes keep domain records on native SDK items. */
 export const FIELDS: SchemaFieldDefinition[] = ['hypothesis_state', 'hypothesis_record'].map(name => ({ name, type: 'string', optional: true }));
+/** Bind a declared explanation to its immutable native source and investigation identity. */
+export function hypothesisPayload(investigation: string, hypothesis: Hypothesis): string { return JSON.stringify({ kind: 'hypothesis', id: hypothesis.id, investigation, statement: hypothesis.statement, predictions: hypothesis.predictions }); }
 /** Parse a complete owner envelope, failing closed on malformed or future records. */
 export function state(raw: unknown): Investigation {
   try {
@@ -57,12 +59,12 @@ export class Store {
       else if (existing.type !== 'string') throw new HypothesisError('schema', 'Registered hypothesis field has an incompatible type', 'Register hypothesis_state and hypothesis_record as string fields');
     }
   }
-  /** Exact complete item reads supply current CAS values, never a saved plan. */
-  async get(id: string): Promise<GetResult['item']> { return (await this.client.get(id, { full: true })).item; }
+  /** Read the complete domain fields and native source revision without a child-corpus walk. */
+  async get(id: string): Promise<GetResult['item']> { return (await this.client.get(id, { fields: 'id,type,parent,created_at,updated_at,body,hypothesis_state,hypothesis_record' })).item; }
   /** Certify discovery before deciding whether a deterministic native record exists. */
   async exists(id: string): Promise<boolean> { return certifyCompleteListResult(await this.client.listAllComplete({ includeBody: false })).items.some(item => item.id === id); }
   /** Materialize an immutable record, validating existing content on every retry. */
-  async record(id: string, type: string, title: string, payload: string, parent?: string): Promise<void> {
+  async record(id: string, type: string, title: string, payload: string, parent?: string): Promise<GetResult['item']> {
     this.writable();
     const exists = await this.exists(id);
     const current = exists ? await this.get(id) : undefined;
@@ -76,27 +78,69 @@ export class Store {
     const actual = await this.get(id);
     if (actual.hypothesis_record !== payload || actual.parent !== parent || actual.type !== type) throw new HypothesisError('conflict', 'Native record no longer matches this operation', 'Inspect the linked record and retry with a new operation identity');
     await this.boundary('record-written');
+    return actual;
+  }
+  /** Treat missing or unreadable source identities as failed CAS preconditions. */
+  async source(id: string): Promise<GetResult['item']> {
+    try { return await this.get(id); }
+    catch { throw new HypothesisError('conflict', 'An investigation source is unavailable', 'Restore or reconcile the native source before retrying admission'); }
+  }
+  /** Capture every native dependency before exposing a mutation boundary. */
+  async sources(investigation: string, value: Investigation): Promise<GetResult['item'][]> {
+    const records = await Promise.all([...value.hypotheses, ...value.observations].map(record => this.source(record.id)));
+    for (const [index, hypothesis] of value.hypotheses.entries()) {
+      const record = records[index];
+      if (record.hypothesis_record !== hypothesisPayload(investigation, hypothesis) || record.parent !== investigation || record.type !== 'Question') throw new HypothesisError('conflict', 'A hypothesis source no longer matches the declared explanation', 'Inspect and reconcile the native hypothesis record before admitting new investigation changes');
+    }
+    return records;
+  }
+  /** Fence source generations and compare their full SDK revisions through the owner CAS. */
+  async withSources<T>(sources: GetResult['item'][], action: () => Promise<T>): Promise<T> {
+    const ordered = [...new Map(sources.map(item => [item.id, item])).values()].sort((a, b) => a.id.localeCompare(b.id, 'en'));
+    const leases: LockLease[] = []; const settings = await readSettings(this.options.workspace);
+    try {
+      for (const item of ordered) leases.push(await acquireLockLease(this.options.workspace, item.id, settings.locks.ttl_seconds, await this.author(), false, settings.governance.force_required_for_stale_lock, 10000, { maxWaitMs: 10000 }));
+      /** Keep every source lease generation fenced until the owner mutation settles. */
+      const fenced = async (index: number): Promise<T> => {
+        if (index < leases.length) return leases[index].fence(() => fenced(index + 1));
+        for (const expected of ordered) {
+          const current = await this.source(expected.id);
+          if (JSON.stringify(current) !== JSON.stringify(expected)) throw new HypothesisError('conflict', 'An investigation source revision changed before admission', 'Inspect the source record and retry from a fresh matrix; no owner change was admitted');
+        }
+        return action();
+      };
+      return await fenced(0);
+    } catch (error) {
+      if (/lock/i.test(String(error))) throw new HypothesisError('conflict', 'An investigation source lock could not be retained', 'Retry after competing source writes finish');
+      throw error;
+    } finally { for (const lease of leases.reverse()) await lease.release(); }
   }
   /** Compare the exact current owner field under the SDK writer lock. */
-  async commit(item: GetResult['item'], value: Investigation, comment: string): Promise<void> {
+  async commit(item: GetResult['item'], value: Investigation, comment: string, sources: GetResult['item'][] = []): Promise<void> {
     this.writable();
     const encoded = JSON.stringify(value);
     const options: PmClientFullMutationOptions = { hypothesisState: encoded, comment: [comment] };
-    await commitItemMutations({ pmRoot: this.options.workspace, author: await this.author(), transactionId: `hypothesis-owner-${digest([item.id, item.hypothesis_state, encoded])}`, mutations: [{ op: 'update', id: item.id, match: item.hypothesis_state === undefined ? { key: 'updated_at', value: item.updated_at } : { key: 'hypothesis_state', value: item.hypothesis_state }, options }], onTransition: this.options.onTransition, lockWaitMs: 10000 });
+    await this.withSources(sources, async () => { await commitItemMutations({ pmRoot: this.options.workspace, author: await this.author(), transactionId: `hypothesis-owner-${digest([item.id, item.hypothesis_state, encoded, sources])}`, mutations: [{ op: 'update', id: item.id, match: item.hypothesis_state === undefined ? { key: 'updated_at', value: item.updated_at } : { key: 'hypothesis_state', value: item.hypothesis_state }, options }], onTransition: this.options.onTransition, lockWaitMs: 10000 }); });
   }
   /** Recompute every retry from current state; unchanged also requires a fresh current read. */
-  async mutate(id: string, change: (value: Investigation) => string | undefined): Promise<Investigation> {
+  async mutate(id: string, change: (value: Investigation) => string | undefined, expectedSources: GetResult['item'][] = []): Promise<Investigation> {
     this.writable();
     for (let attempt = 0; attempt < 12; attempt++) {
       const item = await this.get(id); const value = state(item.hypothesis_state);
       this.expected(value);
+      const dependencies = await this.sources(item.id, value);
       await this.boundary('owner-read');
       const latest = await this.get(id);
       if (latest.hypothesis_state !== item.hypothesis_state) continue;
       const comment = change(value);
-      if (comment === undefined) { await this.boundary('complete'); return value; }
+      await this.boundary('admission-ready');
+      if (comment === undefined) {
+        const current = await this.withSources([...dependencies, ...expectedSources], () => this.get(id));
+        if (current.hypothesis_state !== item.hypothesis_state) continue;
+        await this.boundary('complete'); return value;
+      }
       value.revision++;
-      try { await this.commit(item, value, comment); }
+      try { await this.commit(item, value, comment, [...dependencies, ...expectedSources]); }
       catch (error) { if (/upsert_match_changed|no longer carries upsert key/.test(String(error))) continue; throw error; }
       await this.boundary('owner-written'); await this.boundary('complete'); return value;
     }

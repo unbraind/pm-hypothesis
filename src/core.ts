@@ -24,8 +24,24 @@ export function inert(value: string): string {
 export function data(value: string): string { requireInput(typeof value === 'string' && value.trim().length > 0 && value.length <= 8192, 'Text must contain 1 to 8192 characters'); return value; }
 /** Stable intent identities support interrupted retry without relying on a wall clock. */
 export function digest(value: unknown): string { return createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0, 24); }
-/** Estimate the larger actual default host JSON and TOON representations, including newline. */
-export function tokens(value: unknown): number { return Math.ceil(Math.max(Buffer.byteLength(JSON.stringify(value, null, 2) + '\n'), Buffer.byteLength(encode(value) + '\n')) / 4); }
+/** Render control characters reversibly at the wire boundary, preserving decoded identities. */
+export function wire(value: unknown, format: 'json' | 'toon'): string {
+  const controls = /[\u007f-\u009f]/;
+  /** JSON quoting preserves control bytes after decoding without terminal interpretation. */
+  const json = (entry: unknown): string => JSON.stringify(entry, null, 2).replace(/[\u007f-\u009f]/g, character => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`);
+  if (format === 'json') return json(value);
+  const encoded = encode(value, { replacer: (_key, entry) => {
+    if (typeof entry === 'string' && controls.test(entry)) return entry + '\n';
+    if (typeof entry === 'object' && entry !== null && !Array.isArray(entry)) return Object.fromEntries(Object.entries(entry).map(([key, content]) => [controls.test(key) ? key + '\n' : key, content]));
+    return entry;
+  } });
+  return encoded.replace(/"(?:\\.|[^"\\])*"/g, quoted => {
+    const text = JSON.parse(quoted) as string;
+    return controls.test(text) ? json(text.slice(0, -1)) : quoted;
+  });
+}
+/** Estimate the larger actual lossless JSON and TOON transport, including newline. */
+export function tokens(value: unknown): number { return Math.ceil(Math.max(Buffer.byteLength(wire(value, 'json') + '\n'), Buffer.byteLength(wire(value, 'toon') + '\n')) / 4); }
 /** Stabilize the self-inclusive byte estimate before enforcing the bound. */
 function account<T>(value: Packet<T>): Packet<T> { let count = tokens(value); while (value.estimatedTokens !== count) { value.estimatedTokens = count; count = tokens(value); } return value; }
 /** Include a deterministic prefix of rows and an omission receipt in the requested budget. */
@@ -38,9 +54,9 @@ export function packet<T>(investigation: string, revision: number, rows: T[], bu
   return result;
 }
 
-/** Recursively render strings as inert data without changing stored equality semantics. */
+/** Escape human display fields only; reusable identities and values stay byte-exact. */
 export function safe<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value, (_key, entry: unknown) => typeof entry === 'string' ? inert(entry) : entry)) as T;
+  return JSON.parse(JSON.stringify(value, (key, entry: unknown) => typeof entry === 'string' && ['statement', 'reason', 'how'].includes(key) ? inert(entry) : entry)) as T;
 }
 
 /** Adapt public SDK functions to typed refusals while preserving explicit crash-test faults. */
@@ -53,3 +69,6 @@ export function guarded<Args extends unknown[], Result>(operation: (...args: Arg
     }
   };
 }
+
+/** Quote one canonical item identity as a reusable shell operand in recovery receipts. */
+export function operand(value: string): string { return "'" + value.replaceAll("'", "'\\''") + "'"; }

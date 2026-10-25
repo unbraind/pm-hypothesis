@@ -31,7 +31,7 @@ test('untrusted text stays exact in storage and inert in terminal/markup output'
   await observe(f.investigation, malicious, malicious, f.options);
   const result = await matrix(f.investigation, f.options); assert.equal(result.rows[0].status, 'viable');
   assert.equal(result.rows[0].id, h.hypothesis); assert.equal(result.rows[0].statement, inert(malicious));
-  assert.ok(!JSON.stringify(result).includes('\u001b')); assert.ok(!JSON.stringify(result).includes('<b>'));
+  assert.ok(!JSON.stringify(result).includes('\u001b')); assert.equal(result.rows[0].predictions[0].observation, malicious); assert.equal(result.rows[0].predictions[0].value, malicious);
   const persisted = state((await new Store(f.options).get(f.investigation)).hypothesis_state); assert.equal(persisted.hypotheses[0].statement, malicious);
   assert.equal(data('literal \\u001b'), 'literal \\u001b'); assert.notEqual(safe(malicious), 'literal \\u001b');
   for (const text of ['', ' ', 'x'.repeat(8193)]) assert.throws(() => data(text));
@@ -106,10 +106,10 @@ test('CAS rechecks the revision at the SDK lock boundary', async t => {
   await observe(f.investigation, 'target', 'yes', { ...f.options, onTransition: async event => {
     if (event.transition === 'prepared' && event.transactionId.includes('-owner-') && !injected) {
       injected = true; const current = state((await store.get(f.investigation)).hypothesis_state); current.revision++;
-      current.observations.push({ ...current.observations[0], id: 'competing-native', observation: 'external' });
+      // Preserve the source set while forcing a fresh owner revision under the SDK guard.
       const edits = { message: 'Synthetic interleaved owner edit', hypothesisState: JSON.stringify(current) }; await f.client.update(f.investigation, edits);
     }
   } });
   const result = state((await store.get(f.investigation)).hypothesis_state);
-  assert.equal(injected, true); assert.equal(result.observations.length, 3); assert.ok(result.observations.some(entry => entry.id === first.observation));
+  assert.equal(injected, true); assert.equal(result.observations.length, 2); assert.ok(result.observations.some(entry => entry.id === first.observation));
 });

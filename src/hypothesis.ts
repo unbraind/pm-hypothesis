@@ -1,7 +1,7 @@
 import { getActiveExtensionRegistrations, readSettings } from '@unbrained/pm-cli/sdk';
-import { data, digest, HypothesisError, packet, requireInput, safe } from './core.ts';
+import { data, digest, HypothesisError, operand, packet, requireInput, safe } from './core.ts';
 import { choose, derive } from './derive.ts';
-import { state, Store } from './store.ts';
+import { hypothesisPayload, state, Store } from './store.ts';
 import type { Conclusion, Investigation, ObserveOptions, Observation, Options, Prediction, ResumeRow } from './types.ts';
 
 /** Require a native Question or Issue as the investigation owner. */
@@ -16,7 +16,7 @@ export async function open(title: string, options: Options & { item?: string }) 
   const item = await store.get(id); ownerType(item.type);
   if (item.hypothesis_state === undefined) await store.commit(item, { version: 1, revision: 0, hypotheses: [], observations: [] }, 'Opened differential investigation');
   else state(item.hypothesis_state);
-  return { investigation: id };
+  return { investigation: item.id };
 }
 /** Declare a competing explanation with distinct exact-equality prediction keys. */
 export async function add(investigation: string, statement: string, predictions: Prediction[], options: Options) {
@@ -24,12 +24,14 @@ export async function add(investigation: string, statement: string, predictions:
   predictions = predictions.map(prediction => ({ observation: data(prediction.observation), value: data(prediction.value) })).sort((a, b) => a.observation.localeCompare(b.observation, 'en'));
   requireInput(new Set(predictions.map(entry => entry.observation)).size === predictions.length, 'Each observation key needs one prediction per hypothesis');
   const store = new Store(options); const owner = await store.get(investigation); ownerType(owner.type); store.expected(state(owner.hypothesis_state));
+  investigation = owner.id;
+  const sources = await store.sources(investigation, state(owner.hypothesis_state));
   const id = `${investigation}-h-${digest([statement, predictions, options.operationId])}`;
-  await store.record(id, 'Question', statement, JSON.stringify({ kind: 'hypothesis', id, investigation, statement, predictions }), investigation);
+  const record = await store.record(id, 'Question', statement, hypothesisPayload(investigation, { id, statement, predictions }), investigation);
   const value = await store.mutate(investigation, current => {
     if (current.hypotheses.some(entry => entry.id === id)) return undefined;
     current.hypotheses.push({ id, statement, predictions }); return `Added hypothesis ${id}`;
-  });
+  }, [...sources, record]);
   return { hypothesis: id, revision: value.revision };
 }
 /** Discover citation support in the active host; no sibling dependency or source reads. */
@@ -55,32 +57,33 @@ export async function observe(investigation: string, observation: string, value:
   if (options.evidence !== undefined) data(options.evidence);
   if (options.when !== undefined) requireInput(/^\d{4}-\d{2}-\d{2}T/.test(options.when) && Number.isFinite(Date.parse(options.when)), 'Observation time must be an ISO timestamp');
   const owner = await store.get(investigation); store.expected(state(owner.hypothesis_state));
+  investigation = owner.id;
+  const sources = await store.sources(investigation, state(owner.hypothesis_state));
   const id = `${investigation}-o-${digest([observation, value, status, who, how, options.when, options.evidence, options.operationId])}`;
   const payload = JSON.stringify({ kind: 'observation', id, investigation, observation, value, status, who, how, when: options.when, evidence: options.evidence });
-  await store.record(id, 'Test', `Observation: ${observation}`, payload, investigation);
-  const record = await store.get(id); requireInput(typeof record.created_at === 'string', 'Observation record time is missing');
+  const record = await store.record(id, 'Test', `Observation: ${observation}`, payload, investigation); requireInput(typeof record.created_at === 'string', 'Observation record time is missing');
   const fact: Observation = { id, observation, value, status, who, when: options.when ?? record.created_at, how, evidence: options.evidence, evidenceStatus: evidenceStatus(options.evidence) };
   const result = await store.mutate(investigation, current => {
     if (current.observations.some(entry => entry.id === id)) return undefined;
     current.observations.push(fact); return `Recorded ${status} observation ${id}`;
-  });
+  }, [...sources, record]);
   return { observation: id, revision: result.revision, evidenceStatus: fact.evidenceStatus };
 }
 /** Read one complete atomic investigation without relying on bounded list projections. */
-async function read(investigation: string, options: Options): Promise<Investigation> { return state((await new Store(options).get(investigation)).hypothesis_state); }
+async function read(investigation: string, options: Options): Promise<{ id: string; value: Investigation }> { const item = await new Store(options).get(investigation); return { id: item.id, value: state(item.hypothesis_state) }; }
 /** Compute a bounded matrix, including witnesses and exact omission counts. */
 export async function matrix(investigation: string, options: Options & { budget?: number }) {
-  const value = await read(investigation, options);
-  return packet(investigation, value.revision, safe(derive(value)), options.budget ?? 10000, 'pm hypothesis matrix <investigation> --budget 1000000');
+  const snapshot = await read(investigation, options); investigation = snapshot.id; const value = snapshot.value;
+  return packet(investigation, value.revision, safe(derive(value)), options.budget ?? 10000, `pm hypothesis show ${operand(investigation)} --json`);
 }
 /** Suggest one discriminating key without executing an evidence request. */
 export async function nextRequest(investigation: string, options: Options) {
-  const value = await read(investigation, options);
+  const snapshot = await read(investigation, options); investigation = snapshot.id; const value = snapshot.value;
   return safe({ investigation, revision: value.revision, request: choose(derive(value)), sourceComplete: true });
 }
 /** Hand off bounded survivors, witnesses, open predictions and the next request. */
 export async function resumePacket(investigation: string, options: Options & { budget?: number }) {
-  const value = await read(investigation, options); const rows = derive(value);
+  const snapshot = await read(investigation, options); investigation = snapshot.id; const value = snapshot.value; const rows = derive(value);
   const content: ResumeRow[] = [{ kind: 'next', request: choose(rows) }];
   if (value.conclusion !== undefined) content.push({ kind: 'conclusion', conclusion: value.conclusion, stale: value.conclusion.revision !== value.revision });
   for (const row of rows.filter(entry => entry.status !== 'eliminated')) content.push({ kind: 'hypothesis', hypothesis: { id: row.id, statement: row.statement, status: row.status, open: row.open } });
@@ -89,11 +92,17 @@ export async function resumePacket(investigation: string, options: Options & { b
     const witness = row.witnesses[index];
     if (witness !== undefined) content.push({ kind: 'witness', hypothesis: row.id, observation: witness.observation.id, key: witness.prediction.observation, expected: witness.prediction.value, actual: witness.observation.value, who: witness.observation.who, when: witness.observation.when, how: witness.observation.how, evidence: witness.observation.evidence });
   }
-  return packet(investigation, value.revision, safe(content), options.budget ?? 1500, 'pm hypothesis matrix <investigation> --budget 1000000');
+  return packet(investigation, value.revision, safe(content), options.budget ?? 1500, `pm hypothesis show ${operand(investigation)} --json`);
+}
+/** Return all records, matrix witnesses and the conclusion without a packet budget. */
+export async function show(investigation: string, options: Options) {
+  const snapshot = await read(investigation, options); investigation = snapshot.id; const value = snapshot.value;
+  return safe({ investigation, revision: value.revision, rows: derive(value), observations: value.observations, conclusion: value.conclusion, sourceComplete: true, complete: true });
 }
 /** Record an explicit conclusion only after every unresolved alternative is acknowledged. */
 export async function conclude(investigation: string, cause: string, reason: string, options: Options & { acceptViable?: string[] }) {
   data(cause); data(reason); const accepted = [...new Set(options.acceptViable ?? [])].sort(); const store = new Store(options);
+  investigation = (await store.get(investigation)).id;
   const result = await store.mutate(investigation, current => {
     const rows = derive(current); const selected = rows.find(entry => entry.id === cause);
     requireInput(selected !== undefined && selected.status !== 'eliminated', 'Choose a hypothesis without an eliminating witness');

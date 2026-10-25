@@ -11,7 +11,7 @@ export interface Conclusion { cause: string; reason: string; accepted: string[];
 /** Atomic owner envelope; no cached elimination state can drift from the facts. */
 export interface Investigation { version: 1; revision: number; hypotheses: Hypothesis[]; observations: Observation[]; conclusion?: Conclusion }
 /** Deterministic seam around real SDK operations, used for crash/interleaving acceptance. */
-export type Boundary = 'record-read' | 'record-written' | 'owner-read' | 'owner-written' | 'complete';
+export type Boundary = 'record-read' | 'record-written' | 'owner-read' | 'owner-written' | 'admission-ready' | 'complete';
 /** Tracker binding; a host client may be injected for reads and extension discovery. */
 export interface Options {
   workspace: string;
