@@ -6,9 +6,18 @@ status: blocked
 priority: 2
 tags[1]: "gh:unbraind/pm-cli#1399"
 created_at: "2026-10-25T08:38:14.938Z"
-updated_at: "2026-10-25T08:38:14.938Z"
+updated_at: "2026-10-25T08:40:20.976Z"
 author: codex-agent
 acceptance_criteria: "Consume a host-owned conditional item mutation service, revalidate revisions on recovery, and run real backend conformance without filesystem fallbacks before enabling remote writes."
 parent: pm-hypothesis-build
 blocked_reason: The pinned SDK conditional item transaction API requires a filesystem tracker root
+comments[1]{created_at,author,text}:
+  "2026-10-25T08:40:20.975Z",codex-agent,The local capability-refusal regression is green. This item remains blocked until the SDK supplies an authoritative backend-owned conditional mutation service; hosted Postgres/MCP mutation acceptance is deliberately unclaimed. This package does not contact hosted services.
+files[3]{path,scope}:
+  src/store.ts,project
+  src/types.ts,project
+  test/edges.test.ts,project
+docs[2]{path,scope}:
+  ARCHITECTURE.md,project
+  README.md,project
 body: ""

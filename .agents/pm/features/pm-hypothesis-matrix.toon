@@ -6,9 +6,7 @@ status: in_progress
 priority: 2
 tags: []
 created_at: "2026-10-25T08:12:48.051Z"
-updated_at: "2026-10-25T08:32:51.836Z"
-assignee: codex-agent
-claim_principal: codex-agent
+updated_at: "2026-10-25T08:46:27.517Z"
 author: codex-agent
 acceptance_criteria: Exact admitted-contradiction witnesses; missing data never eliminates; withdrawal restores only affected explanations; randomized equivalence proof.
 parent: pm-hypothesis-build
