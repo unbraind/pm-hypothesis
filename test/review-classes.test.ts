@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { acquireLockLease } from '@unbrained/pm-cli/sdk';
 import { add, open, conclude, matrix, nextRequest, observe, resumePacket, show } from '../index.ts';
-import type { Boundary } from '../index.ts';
+import type { Boundary, ObserveOptions } from '../index.ts';
 import { Store, state } from '../src/store.ts';
 import { incident } from './helpers.ts';
 
@@ -81,7 +81,8 @@ test('native source writer queues through the SDK owner mutation instead of raci
 
 test('source lock contention refuses without admission and releases acquired leases', async t => {
   const f = await incident(t);
-  const lock = await acquireLockLease(f.workspace, f.a, 1800, 'competing-native'); const previous = process.env.PM_LOCK_WAIT_MS;
+  const held = [f.a, f.b, f.c].sort().at(-1); assert.ok(held);
+  const lock = await acquireLockLease(f.workspace, held, 1800, 'competing-native'); const previous = process.env.PM_LOCK_WAIT_MS;
   try {
     process.env.PM_LOCK_WAIT_MS = '0';
     await assert.rejects(observe(f.investigation, 'install', 'passed', f.options), { code: 'conflict' });
@@ -114,3 +115,16 @@ test('unchanged admission revalidates the current owner after a competing revisi
 });
 
 test('removed observation sources refuse under the same admission precondition', t => sourceRefusal(t, (fixture, id) => fixture.client.delete(id)));
+
+test('acquisition inputs remain bound to the exact source when caller options change', async t => {
+  const f = await incident(t);
+  const options: ObserveOptions = { ...f.options, evidence: 'citation-original', when: '2026-10-25T00:00:00Z', boundary: async point => {
+    if (point === 'record-written') { options.evidence = 'citation-later'; options.when = '2026-10-26T00:00:00Z'; options.author = 'later-actor'; }
+  } };
+  const result = await observe(f.investigation, 'install', 'passed', options);
+  const value = state((await new Store(f.options).get(f.investigation)).hypothesis_state);
+  const fact = value.observations.find(entry => entry.id === result.observation); assert.ok(fact);
+  assert.equal(fact.evidence, 'citation-original'); assert.equal(fact.when, '2026-10-25T00:00:00Z');
+  const raw = JSON.parse(String((await f.client.get(result.observation, { full: true })).item.hypothesis_record)) as { evidence: string; when: string };
+  assert.equal(fact.evidence, raw.evidence); assert.equal(fact.when, raw.when);
+});

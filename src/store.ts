@@ -36,7 +36,7 @@ export class Store {
   /** Caller-selected tracker and mutation seams. */
   readonly options: Options;
   /** Bind SDK access without relying on cwd or Git discovery. */
-  constructor(options: Options) { this.options = options; this.client = options.client ?? new PmClient({ pmRoot: options.workspace, author: options.author, noExtensions: true }); }
+  constructor(options: Options) { this.options = { ...options }; this.client = this.options.client ?? new PmClient({ pmRoot: this.options.workspace, author: this.options.author, noExtensions: true }); }
   /** Refuse explicitly remote effects until the host provides conditional item capabilities. */
   writable(): void { if (this.options.backend === 'remote') throw new HypothesisError('capability', 'The host lacks a backend-owned conditional item mutation service', 'Use a filesystem tracker for writes; injected host clients can still read matrix, next and resume'); }
   /** Resolve canonical attribution through SDK settings, never raw settings files. */
@@ -97,7 +97,7 @@ export class Store {
   /** Fence source generations and compare their full SDK revisions through the owner CAS. */
   async withSources<T>(sources: GetResult['item'][], action: () => Promise<T>): Promise<T> {
     const ordered = [...new Map(sources.map(item => [item.id, item])).values()].sort((a, b) => a.id.localeCompare(b.id, 'en'));
-    const leases: LockLease[] = []; const settings = await readSettings(this.options.workspace);
+    const leases: LockLease[] = []; const settings = await readSettings(this.options.workspace); let result: T;
     try {
       for (const item of ordered) leases.push(await acquireLockLease(this.options.workspace, item.id, settings.locks.ttl_seconds, await this.author(), false, settings.governance.force_required_for_stale_lock, 10000, { maxWaitMs: 10000 }));
       /** Keep every source lease generation fenced until the owner mutation settles. */
@@ -109,11 +109,12 @@ export class Store {
         }
         return action();
       };
-      return await fenced(0);
+      result = await fenced(0);
     } catch (error) {
       if (/lock/i.test(String(error))) throw new HypothesisError('conflict', 'An investigation source lock could not be retained', 'Retry after competing source writes finish');
       throw error;
-    } finally { for (const lease of leases.reverse()) await lease.release(); }
+    } finally { await Promise.all(leases.reverse().map(lease => lease.release())); }
+    return result;
   }
   /** Compare the exact current owner field under the SDK writer lock. */
   async commit(item: GetResult['item'], value: Investigation, comment: string, sources: GetResult['item'][] = []): Promise<void> {

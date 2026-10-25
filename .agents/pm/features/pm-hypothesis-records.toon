@@ -6,19 +6,21 @@ status: in_progress
 priority: 2
 tags: []
 created_at: "2026-10-25T08:12:42.151Z"
-updated_at: "2026-10-25T14:49:31.713Z"
+updated_at: "2026-10-25T15:07:31.747Z"
 author: codex-agent
 acceptance_criteria: "Native Question investigations, linked hypotheses and Test facts with provenance and registered schema; SDK-only storage without git."
 parent: pm-hypothesis-build
-comments[2]{created_at,author,text}:
+comments[3]{created_at,author,text}:
   "2026-10-25T08:18:39.486Z",codex-agent,"Implemented registered hypothesis_state and immutable hypothesis_record fields, SDK-registered Question/Test types, native parent links and audit comments. Minimal SDK trackers omit Question/Test, so open registers them explicitly. Reads certify native record discovery and load the complete atomic owner."
   "2026-10-25T08:38:15.849Z",codex-agent,"Cross-investigation regression was red against the implementation commit: the global SDK unique-key guard conflated equal source payloads. Source envelopes now include their native id and owner, so identical titles with different operation identities, equal explanations and equal facts stay independent. The dedicated real-tracker scenario is green; no prior records or histories were rewritten."
-files[5]{path,scope}:
+  "2026-10-25T15:07:25.299Z",codex-agent,"Acquisition options are copied before async boundaries, and Store owns a copy of workspace/author/revision options. A record-written callback changing the caller evidence, time and actor cannot change the payload admitted from that source. The real SDK regression compares admitted provenance against the native source envelope. Reverting the acquisition snapshot fails this assertion."
+files[6]{path,scope}:
   index.ts,project
   src/hypothesis.ts,project
   src/store.ts,project
   src/types.ts,project
   test/hypothesis.test.ts,project
+  test/review-classes.test.ts,project
 tests[2]:
   - command: "node --test --test-name-pattern=\"open attaches\" test/hypothesis.test.ts"
     scope: project

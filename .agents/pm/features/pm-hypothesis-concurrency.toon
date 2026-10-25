@@ -6,14 +6,15 @@ status: in_progress
 priority: 2
 tags: []
 created_at: "2026-10-25T08:13:07.271Z"
-updated_at: "2026-10-25T14:49:36.796Z"
+updated_at: "2026-10-25T15:07:33.506Z"
 author: codex-agent
 acceptance_criteria: "Every write revalidates current expected revision; retry and crash convergence without duplicates; interleavings at every observation, withdrawal and conclusion boundary."
 parent: pm-hypothesis-build
-comments[3]{created_at,author,text}:
+comments[4]{created_at,author,text}:
   "2026-10-25T08:18:53.546Z",codex-agent,Each journal contains one target. Current owner field is its expected revision; retry recomputes from a fresh read. Immutable source records are revalidated before dependent owner work. Exhaustive package and SDK transition crash/interleaving cases are running.
   "2026-10-25T08:34:49.796Z",codex-agent,Exhaustive initial boundary suite passed 64/64 plus seeded 100-set property test. Added native edit cases prove source revalidation and actual SDK CAS refusal/retry between the final owner read and commit. No frozen multi-target plan is replayed; single-target journal dependencies stop on conflict.
   "2026-10-25T14:39:59.215Z",codex-agent,"PR #1 source-admission class: captured hypothesis and observation source revisions are now held with SDK native item leases and fenced through the owner field CAS. Source changes at pre-admission boundaries refuse with conflict and leave matrix/revision unchanged; post-admission edits serialize later. Revert proof: bypassing fenced revision validation makes the record-written edit regression fail with missing expected rejection. All 9 behavioral revert proofs passed and restored source bytes exactly."
+  "2026-10-25T15:07:22.850Z",codex-agent,"CI run 40204094375 passed 183/183 tests on both Node 22 and 26, but strict coverage reported one unmeasured async cleanup path (99.81% branches). Cleanup now starts every SDK lease release and returns after finally, with the partial-acquisition regression holding the last ordered source so prior leases must be released before retry. Focused source coverage confirms that cleanup path is measured; thresholds remain 100 in all dimensions."
 files[3]{path,scope}:
   src/store.ts,project
   test/concurrency.test.ts,project

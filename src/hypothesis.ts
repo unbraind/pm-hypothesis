@@ -8,6 +8,7 @@ import type { Conclusion, Investigation, ObserveOptions, Observation, Options, P
 function ownerType(type: unknown): void { requireInput(type === 'Question' || type === 'Issue', 'Investigation owner must be a Question or Issue'); }
 /** Open or attach a revisioned investigation, with deterministic replay identity. */
 export async function open(title: string, options: Options & { item?: string }) {
+  options = { ...options };
   data(title); const store = new Store(options); await store.register();
   const prefix = (await readSettings(options.workspace)).id_prefix;
   requireInput(typeof prefix === 'string', 'Tracker prefix is missing');
@@ -20,6 +21,7 @@ export async function open(title: string, options: Options & { item?: string }) 
 }
 /** Declare a competing explanation with distinct exact-equality prediction keys. */
 export async function add(investigation: string, statement: string, predictions: Prediction[], options: Options) {
+  options = { ...options };
   data(statement); requireInput(predictions.length > 0 && predictions.length <= 1000, 'Supply 1 to 1000 predictions');
   predictions = predictions.map(prediction => ({ observation: data(prediction.observation), value: data(prediction.value) })).sort((a, b) => a.observation.localeCompare(b.observation, 'en'));
   requireInput(new Set(predictions.map(entry => entry.observation)).size === predictions.length, 'Each observation key needs one prediction per hypothesis');
@@ -41,6 +43,7 @@ export function evidenceStatus(citation?: string): Observation['evidenceStatus']
 }
 /** Admit/dispute a fact or withdraw an existing fact; all elimination is derived. */
 export async function observe(investigation: string, observation: string, value: string, options: ObserveOptions) {
+  options = { ...options };
   const store = new Store(options);
   if (options.withdraw !== undefined) {
     const id = data(options.withdraw);
@@ -101,6 +104,7 @@ export async function show(investigation: string, options: Options) {
 }
 /** Record an explicit conclusion only after every unresolved alternative is acknowledged. */
 export async function conclude(investigation: string, cause: string, reason: string, options: Options & { acceptViable?: string[] }) {
+  options = { ...options };
   data(cause); data(reason); const accepted = [...new Set(options.acceptViable ?? [])].sort(); const store = new Store(options);
   investigation = (await store.get(investigation)).id;
   const result = await store.mutate(investigation, current => {
