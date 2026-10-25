@@ -6,11 +6,11 @@ status: in_progress
 priority: 2
 tags: []
 created_at: "2026-10-25T08:13:07.271Z"
-updated_at: "2026-10-25T15:45:41.984Z"
+updated_at: "2026-10-25T15:54:11.971Z"
 author: codex-agent
 acceptance_criteria: "Every write revalidates current expected revision; retry and crash convergence without duplicates; interleavings at every observation, withdrawal and conclusion boundary."
 parent: pm-hypothesis-build
-comments[8]{created_at,author,text}:
+comments[10]{created_at,author,text}:
   "2026-10-25T08:18:53.546Z",codex-agent,Each journal contains one target. Current owner field is its expected revision; retry recomputes from a fresh read. Immutable source records are revalidated before dependent owner work. Exhaustive package and SDK transition crash/interleaving cases are running.
   "2026-10-25T08:34:49.796Z",codex-agent,Exhaustive initial boundary suite passed 64/64 plus seeded 100-set property test. Added native edit cases prove source revalidation and actual SDK CAS refusal/retry between the final owner read and commit. No frozen multi-target plan is replayed; single-target journal dependencies stop on conflict.
   "2026-10-25T14:39:59.215Z",codex-agent,"PR #1 source-admission class: captured hypothesis and observation source revisions are now held with SDK native item leases and fenced through the owner field CAS. Source changes at pre-admission boundaries refuse with conflict and leave matrix/revision unchanged; post-admission edits serialize later. Revert proof: bypassing fenced revision validation makes the record-written edit regression fail with missing expected rejection. All 9 behavioral revert proofs passed and restored source bytes exactly."
@@ -19,6 +19,8 @@ comments[8]{created_at,author,text}:
   "2026-10-25T15:36:50.025Z",codex-agent,"The shared Store.mutate helper now captures the owner and complete native hypothesis/observation read set before preparation. It never rebases: native owner CAS and all source revisions stay fixed, including unchanged operations, repeated source reads and deterministic reopen preparation. Combined matrix covers 1,104 schedules across all six paths and every ordered pre/post boundary pair, with observation and hypothesis edits, peer withdrawal/conclusion and unchanged controls. Source preparations are materialized by real interrupted API calls before replay cases; byte comparisons include every durable tracker file, excluding only gitignored SDK caches."
   "2026-10-25T15:45:05.392Z",codex-agent,"Behavioral revert proof: the exact combined owner-update plus observation-source edit at owner-read initially failed for both withdrawal and conclusion with Missing expected rejection. Reintroducing an owner retry that calls mutate again with fresh source snapshots makes those same two tests fail. All 11 behavioral revert proofs passed in a disposable source copy, restored the edited files byte-for-byte and removed that copy. No source in the package worktree was changed by the proof runner."
   "2026-10-25T15:45:38.901Z",codex-agent,"Final focused tracker-linked run passed 6/6: exact withdrawal/conclusion combined faults, duplicate source reads, native owner-only revision, deterministic reopen and unadmitted prepared-source reread. Typecheck and lint passed; duplication remains zero; docstrings are 65/65. All 11 revert proofs passed. Full combined schedules and crash recovery remain running independently; the exact pushed head will run complete release gates in CI."
+  "2026-10-25T15:52:08.926Z",codex-agent,"CI run 40208511742 passed all 1,295 tests but blocked on branch coverage 99.81: the duplicate-read-set rejection was no longer reached indirectly after prepared-source rereads began refusing earlier. Added a direct real-SDK before/after source snapshot case that proves the shared source guard refuses two revisions of one source without calling its action or writing durable data. Implementation and thresholds are unchanged."
+  "2026-10-25T15:54:09.428Z",codex-agent,"The combined matrix passed all 1,104 schedules locally (1,110 total tests in that run, zero failures/skips/cancellations). The native crash/interleaving suite passed 70/70. The additional tracker-linked conflicting-read-set test passed 1/1, and focused source coverage confirms both rejection branches at the previously missing guard were executed. The six newer focused regressions also passed. Typecheck, lint, zero duplication and 65/65 docstrings remain green; only the missing coverage test and these receipts changed after the first CI run."
 files[6]{path,scope}:
   src/hypothesis.ts,project
   src/store.ts,project
@@ -26,7 +28,7 @@ files[6]{path,scope}:
   test/concurrency.test.ts,project
   test/revert.acceptance.ts,project
   test/review-classes.test.ts,project
-tests[5]:
+tests[6]:
   - command: "node --test --test-name-pattern=\"conditional conclusion rechecks\" test/concurrency.test.ts"
     scope: project
     provenance:
@@ -62,6 +64,13 @@ tests[5]:
     provenance:
       author: codex-agent
       created_at: "2026-10-25T15:44:21.662Z"
+      source_kind: local_mutation
+      source_ref: feat/hypothesis
+  - command: "node --test --test-name-pattern=\"^captured readsets\" test/cas-invocation.test.ts"
+    scope: project
+    provenance:
+      author: codex-agent
+      created_at: "2026-10-25T15:53:30.211Z"
       source_kind: local_mutation
       source_ref: feat/hypothesis
 docs[3]{path,scope}:

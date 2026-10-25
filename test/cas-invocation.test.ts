@@ -165,3 +165,11 @@ test('prepared source rereads retain the first native revision before admission'
     if (point === 'record-read') { await f.client.update(source.id, { comment: ['Peer changed prepared source revision'] }); await save(); }
   } }));
 });
+
+test('captured readsets refuse two revisions of one source without replacing either precondition', async t => {
+  const f = await incident(t); const store = new Store(f.options); const first = await store.source(f.a);
+  await f.client.update(f.a, { comment: ['Peer changed a captured source'] });
+  const second = await store.source(f.a); const checkpoint = await durable(f.workspace); let called = false;
+  await assert.rejects(store.withSources([first, second], async () => { called = true; }), { code: 'conflict' });
+  assert.equal(called, false); assert.deepEqual(await durable(f.workspace), checkpoint);
+});
