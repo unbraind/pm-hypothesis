@@ -6,11 +6,11 @@ status: in_progress
 priority: 2
 tags: []
 created_at: "2026-10-25T08:13:07.271Z"
-updated_at: "2026-10-25T21:38:58.799Z"
+updated_at: "2026-10-25T21:48:01.254Z"
 author: codex-agent
 acceptance_criteria: "Every write revalidates current expected revision; retry and crash convergence without duplicates; interleavings at every observation, withdrawal and conclusion boundary."
 parent: pm-hypothesis-build
-comments[13]{created_at,author,text}:
+comments[15]{created_at,author,text}:
   "2026-10-25T08:18:53.546Z",codex-agent,Each journal contains one target. Current owner field is its expected revision; retry recomputes from a fresh read. Immutable source records are revalidated before dependent owner work. Exhaustive package and SDK transition crash/interleaving cases are running.
   "2026-10-25T08:34:49.796Z",codex-agent,Exhaustive initial boundary suite passed 64/64 plus seeded 100-set property test. Added native edit cases prove source revalidation and actual SDK CAS refusal/retry between the final owner read and commit. No frozen multi-target plan is replayed; single-target journal dependencies stop on conflict.
   "2026-10-25T14:39:59.215Z",codex-agent,"PR #1 source-admission class: captured hypothesis and observation source revisions are now held with SDK native item leases and fenced through the owner field CAS. Source changes at pre-admission boundaries refuse with conflict and leave matrix/revision unchanged; post-admission edits serialize later. Revert proof: bypassing fenced revision validation makes the record-written edit regression fail with missing expected rejection. All 9 behavioral revert proofs passed and restored source bytes exactly."
@@ -24,6 +24,8 @@ comments[13]{created_at,author,text}:
   "2026-10-25T19:54:28.406Z",codex-agent,"Round-3 review: remove source preparation writes, validate owner/source invariants before effects, and use one SDK multi-item transaction per command. Extend source validity to every read/use and add fresh-record byte-equivalence regressions plus model-based peer-edit sequences. Inspect SDK atomicity and fencing guarantees before selecting the commit design."
   "2026-10-25T20:35:32.380Z",codex-agent,"Atomic command design: source plans stay in memory. A single commitItemMutations batch applies the owner CAS first and every required native create; preview validates the whole proposed batch. Source leases are acquired inside the SDK workspace writer and retained through every batch step. Native read sets are validated before semantic checks, before the batch and inside prepared. The expanded tests exposed cached committed journals bypassing transition hooks; fresh invocation transaction identities now prevent adopting a peer's terminal plan, while deterministic native intent ids still converge after crashes."
   "2026-10-25T21:38:54.267Z",codex-agent,"Final recorded model execution via pm test --run --only-last passes 3/3 seeds (24301, 12648430, 720251025), zero failures/skips. Each seed executes 28 commands; total 84 commands, 87 checked states including initial snapshots, and all 42 combinations of six peer edit classes with seven package boundaries. The independent model checks current native images, live item ids, exact owner state, matrix witnesses, next requests, conclusion validity, bounded resumes, append-only histories and byte-identical refusals. Peer edits cover type, parent, payload, provenance, deletion and owner revisions. The fresh-record combined record-read conflict and changed-provenance conclusion cases pass. The 1312-case ordered pair suite now creates its observe/add records inside each tested invocation rather than pre-materializing them; full PR CI will verify it and all unchanged release thresholds. Twelve implementation-only revert proofs are recorded on the records item. All work remains in progress for orchestrator review; claims are released before handoff."
+  "2026-10-25T21:46:14.295Z",codex-agent,"Post-push inspection identified an outdated boundary-matrix oracle: owner-read now validates before semantic decisions, so a source edit at record-read correctly refuses before an admission-ready peer action. The old harness incorrectly requires all prewrite boundaries and waits until admission-ready to capture peer bytes. Updating the oracle to assert the exact reachable prefix and to verify bytes before every prewrite seam, then save only the peer/completed-commit checkpoint. This strengthens detection of premature package writes while permitting required short-circuit behavior; no production behavior or threshold changes."
+  "2026-10-25T21:47:59.154Z",codex-agent,"The new early-refusal regression passes 1/1 both directly and through pm test. It proves a record-read source edit reaches only record-read, plan-ready and owner-read, returns typed conflict, skips the later peer action, and leaves durable bytes equal to the peer checkpoint. Matrix callbacks now verify durable byte equality before every prewrite boundary and record the exact reachable prefix on conflict. CI logs on the prior head confirm stale checkpoint assertions, not an extra product write. Typecheck, lint and zero duplication (0/3421 lines) pass after the oracle correction. Production code is unchanged from the atomic/source-validity commit."
 files[9]{path,scope}:
   src/hypothesis.ts,project
   src/records.ts,project
@@ -34,7 +36,7 @@ files[9]{path,scope}:
   test/revert.acceptance.ts,project
   test/review-classes.test.ts,project
   test/source-model.test.ts,project
-tests[7]:
+tests[8]:
   - command: "node --test --test-name-pattern=\"conditional conclusion rechecks\" test/concurrency.test.ts"
     scope: project
     provenance:
@@ -85,6 +87,13 @@ tests[7]:
     provenance:
       author: codex-agent
       created_at: "2026-10-25T21:02:44.941Z"
+      source_kind: local_mutation
+      source_ref: feat/hypothesis
+  - command: node --test --test-name-pattern='^source conflict stops' test/cas-invocation.test.ts
+    scope: project
+    provenance:
+      author: codex-agent
+      created_at: "2026-10-25T21:46:54.855Z"
       source_kind: local_mutation
       source_ref: feat/hypothesis
 docs[3]{path,scope}:

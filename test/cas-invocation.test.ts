@@ -55,7 +55,7 @@ test('conditional helper combined interleaving matrix: 1312 cases, six commands,
         assert.deepEqual(await durable(workspace), template);
         const options = { workspace, author: 'fixture' }; const store = new Store(options);
         const client = new PmClient({ pmRoot: workspace, author: 'peer', noExtensions: true });
-        const before = state((await store.get(base.investigation)).hypothesis_state); let checkpoint = template; const seen: Boundary[] = []; let verified = false;
+        const before = state((await store.get(base.investigation)).hypothesis_state); const checkpoints = [template]; const seen: Boundary[] = []; let verified = false;
         const pre = (point: Boundary) => point !== 'owner-written' && point !== 'record-written' && point !== 'complete';
         const conflict = fault === 'none' ? false : fault === 'source edit' ? pre(second) : fault === 'both' ? pre(first) || pre(second) : pre(first);
         /** Inspect the exact local commit before any later peer actions. */
@@ -74,6 +74,7 @@ test('conditional helper combined interleaving matrix: 1312 cases, six commands,
         };
         const boundary = async (point: Boundary) => {
           seen.push(point);
+          if (pre(point)) assert.deepEqual(await durable(workspace), checkpoints.at(-1), 'planning appends nothing before each peer action');
           if (!pre(point) && !verified) await intended();
           if (point === first) {
             if (fault === 'owner update' || fault === 'both') {
@@ -86,7 +87,7 @@ test('conditional helper combined interleaving matrix: 1312 cases, six commands,
           if (point === second && (fault === 'source edit' || fault === 'both')) {
             const edits = { hypothesisRecord: 'Changed provenance', message: 'Synthetic paired source edit' }; await client.update(source === 'observation' ? seed.observation : base.a, edits);
           }
-          if (point === 'admission-ready' || !pre(point)) checkpoint = await durable(workspace);
+          checkpoints.push(await durable(workspace));
         };
         const run = (input: Options) => {
           if (command === 'observe' || command === 'admit') return observe(base.investigation, command === 'observe' ? 'new-key' : 'admitted', 'yes', input);
@@ -101,10 +102,15 @@ test('conditional helper combined interleaving matrix: 1312 cases, six commands,
         } else {
           await run({ ...options, boundary }); assert.equal(verified, true);
         }
-        assert.deepEqual(await durable(workspace), checkpoint, 'no extra durable writes after the last peer-only checkpoint');
-        // Refusal prevents dependent later boundaries from being reached.
-        if (!conflict || pre(first)) assert.ok(seen.includes(first));
-        if (!conflict || pre(second)) assert.ok(seen.includes(second)); count++;
+        assert.deepEqual(await durable(workspace), checkpoints.at(-1), 'no extra durable writes after the last peer-only checkpoint');
+        // Early source validation skips dependent later boundaries and peer actions.
+        if (conflict) {
+          const changed = [...(fault !== 'source edit' ? [first] : []), ...(fault === 'source edit' || fault === 'both' ? [second] : [])].filter(pre);
+          const earliest = Math.min(...changed.map(point => points.indexOf(point)));
+          const stop = earliest <= points.indexOf('owner-read') ? 'owner-read' : 'admission-ready';
+          assert.deepEqual(seen, points.slice(0, points.indexOf(stop) + 1));
+        } else { assert.ok(seen.includes(first)); assert.ok(seen.includes(second)); }
+        count++;
       }));
     }
   }
@@ -155,4 +161,15 @@ test('captured readsets refuse two revisions of one source without replacing eit
   const second = await store.get(f.a); const checkpoint = await durable(f.workspace); let called = false;
   await assert.rejects(store.withSources([first, second], async () => { called = true; }), { code: 'conflict' });
   assert.equal(called, false); assert.deepEqual(await durable(f.workspace), checkpoint);
+});
+
+
+test('source conflict stops before later peer edits without appending native records', async t => {
+  const f = await incident(t); const seed = await observe(f.investigation, 'seed', 'yes', f.options); let checkpoint: Record<string, string> | undefined; const seen: Boundary[] = [];
+  await assert.rejects(observe(f.investigation, 'new-key', 'yes', { ...f.options, boundary: async point => {
+    seen.push(point);
+    if (point === 'record-read') { const edit = { hypothesisRecord: 'Edited source provenance', message: 'Synthetic peer edit' }; await f.client.update(seed.observation, edit); checkpoint = await durable(f.workspace); }
+    assert.notEqual(point, 'admission-ready', 'a refused source skips later dependent peer actions');
+  } }), { code: 'conflict' });
+  assert.deepEqual(seen, ['record-read', 'plan-ready', 'owner-read']); assert.ok(checkpoint); assert.deepEqual(await durable(f.workspace), checkpoint);
 });
