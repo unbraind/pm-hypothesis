@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 
 /** Behavioral reversions replace only the named implementation branch, never test assertions. */
 const proofs = [
+  { file: 'src/store.ts', label: 'invocation CAS: restore owner retry that refreshes source preconditions', before: "await this.boundary('owner-read');\n    const comment", after: "await this.boundary('owner-read');\n    if (JSON.stringify(await this.get(id)) !== JSON.stringify(item)) return this.mutate(id, change, prepare, initialize);\n    const comment", test: 'test/cas-invocation.test.ts', pattern: '^invocation CAS:' },
   { file: 'src/derive.ts', label: 'derive: disable contradiction elimination', before: "witnesses.length > 0 ? 'eliminated'", after: "false ? 'eliminated'", test: 'test/hypothesis.test.ts', pattern: '^acceptance:' },
   { file: 'src/hypothesis.ts', label: 'observe: retain withdrawn admission', before: "fact.status = 'withdrawn';", after: "fact.status = fact.status;", test: 'test/hypothesis.test.ts', pattern: '^acceptance:' },
   { file: 'src/hypothesis.ts', label: 'conclude: permit unacknowledged survivors', before: 'if (JSON.stringify(others) !== JSON.stringify(accepted))', after: 'if (false)', test: 'test/hypothesis.test.ts', pattern: '^conclusions refuse' },

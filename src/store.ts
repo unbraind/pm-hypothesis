@@ -76,7 +76,7 @@ export class Store {
     }
     // Revalidate the dependency even when the SDK adopted an interrupted creation.
     const actual = await this.get(id);
-    if (actual.hypothesis_record !== payload || actual.parent !== parent || actual.type !== type) throw new HypothesisError('conflict', 'Native record no longer matches this operation', 'Inspect the linked record and retry with a new operation identity');
+    if (actual.hypothesis_record !== payload || actual.parent !== parent || actual.type !== type || current !== undefined && JSON.stringify(actual) !== JSON.stringify(current)) throw new HypothesisError('conflict', 'Native record no longer matches this operation', 'Inspect the linked record and retry with a new operation identity');
     await this.boundary('record-written');
     return actual;
   }
@@ -96,7 +96,13 @@ export class Store {
   }
   /** Fence source generations and compare their full SDK revisions through the owner CAS. */
   async withSources<T>(sources: GetResult['item'][], action: () => Promise<T>): Promise<T> {
-    const ordered = [...new Map(sources.map(item => [item.id, item])).values()].sort((a, b) => a.id.localeCompare(b.id, 'en'));
+    const captured = new Map<string, GetResult['item']>();
+    for (const item of sources) {
+      const previous = captured.get(item.id);
+      if (previous !== undefined && JSON.stringify(previous) !== JSON.stringify(item)) throw new HypothesisError('conflict', 'A source changed between reads in this invocation', 'Inspect the source record and retry the command from a fresh snapshot');
+      captured.set(item.id, item);
+    }
+    const ordered = [...captured.values()].sort((a, b) => a.id.localeCompare(b.id, 'en'));
     const leases: LockLease[] = []; const settings = await readSettings(this.options.workspace); let result: T;
     try {
       for (const item of ordered) leases.push(await acquireLockLease(this.options.workspace, item.id, settings.locks.ttl_seconds, await this.author(), false, settings.governance.force_required_for_stale_lock, 10000, { maxWaitMs: 10000 }));
@@ -116,35 +122,40 @@ export class Store {
     } finally { await Promise.all(leases.reverse().map(lease => lease.release())); }
     return result;
   }
-  /** Compare the exact current owner field under the SDK writer lock. */
-  async commit(item: GetResult['item'], value: Investigation, comment: string, sources: GetResult['item'][] = []): Promise<void> {
-    this.writable();
+  /** Apply the captured owner precondition while its complete source read set is fenced. */
+  private async commit(item: GetResult['item'], value: Investigation, comment: string, sources: GetResult['item'][]): Promise<void> {
     const encoded = JSON.stringify(value);
     const options: PmClientFullMutationOptions = { hypothesisState: encoded, comment: [comment] };
-    await this.withSources(sources, async () => { await commitItemMutations({ pmRoot: this.options.workspace, author: await this.author(), transactionId: `hypothesis-owner-${digest([item.id, item.hypothesis_state, encoded, sources])}`, mutations: [{ op: 'update', id: item.id, match: item.hypothesis_state === undefined ? { key: 'updated_at', value: item.updated_at } : { key: 'hypothesis_state', value: item.hypothesis_state }, options }], onTransition: this.options.onTransition, lockWaitMs: 10000 }); });
-  }
-  /** Recompute every retry from current state; unchanged also requires a fresh current read. */
-  async mutate(id: string, change: (value: Investigation) => string | undefined, expectedSources: GetResult['item'][] = []): Promise<Investigation> {
-    this.writable();
-    for (let attempt = 0; attempt < 12; attempt++) {
-      const item = await this.get(id); const value = state(item.hypothesis_state);
-      this.expected(value);
-      const dependencies = await this.sources(item.id, value);
-      await this.boundary('owner-read');
-      const latest = await this.get(id);
-      if (latest.hypothesis_state !== item.hypothesis_state) continue;
-      const comment = change(value);
-      await this.boundary('admission-ready');
-      if (comment === undefined) {
-        const current = await this.withSources([...dependencies, ...expectedSources], () => this.get(id));
-        if (current.hypothesis_state !== item.hypothesis_state) continue;
-        await this.boundary('complete'); return value;
-      }
-      value.revision++;
-      try { await this.commit(item, value, comment, [...dependencies, ...expectedSources]); }
-      catch (error) { if (/upsert_match_changed|no longer carries upsert key/.test(String(error))) continue; throw error; }
-      await this.boundary('owner-written'); await this.boundary('complete'); return value;
+    try {
+      await commitItemMutations({ pmRoot: this.options.workspace, author: await this.author(), transactionId: `hypothesis-owner-${digest([item, encoded, sources])}`, mutations: [{ op: 'update', id: item.id, match: { key: 'updated_at', value: item.updated_at }, options }], onTransition: this.options.onTransition, lockWaitMs: 10000 });
+    } catch (error) {
+      if (/upsert_match_changed|no longer carries upsert key/.test(String(error))) throw new HypothesisError('conflict', 'The owner revision changed before the conditional mutation', 'Read the current investigation and retry the command; this invocation did not change the owner');
+      throw error;
     }
-    throw new HypothesisError('conflict', 'Concurrent investigation writers exhausted retries', 'Retry after competing writes finish');
+  }
+  /** One invocation, one immutable owner/source read set; contention requires a fresh invocation. */
+  async mutate(id: string, change: (value: Investigation) => string | undefined, prepare?: (owner: GetResult['item']) => Promise<GetResult['item'][]>, initialize = false, capturedOwner?: GetResult['item']): Promise<{ id: string; value: Investigation }> {
+    this.writable();
+    const item = capturedOwner ?? await this.get(id);
+    requireInput(item.type === 'Question' || item.type === 'Issue', 'Investigation owner must be a Question or Issue');
+    const initial = initialize && item.hypothesis_state === undefined;
+    const value: Investigation = initial ? { version: 1, revision: 0, hypotheses: [], observations: [] } : state(item.hypothesis_state);
+    this.expected(value);
+    // Capture ONCE, before preparation or any exposed boundary. Never refresh on contention.
+    const dependencies = await this.sources(item.id, value);
+    const sources = [...dependencies, ...await prepare?.(item) ?? []];
+    await this.boundary('owner-read');
+    const comment = initial ? 'Opened differential investigation' : change(value);
+    await this.boundary('admission-ready');
+    await this.withSources(sources, async () => {
+      const current = await this.get(item.id);
+      if (JSON.stringify(current) !== JSON.stringify(item)) throw new HypothesisError('conflict', 'The captured owner revision changed', 'Read the current investigation and retry the command; source preconditions cannot be rebased');
+      if (comment !== undefined) {
+        if (!initial) value.revision++;
+        await this.commit(item, value, comment, sources);
+      }
+    });
+    if (comment !== undefined) await this.boundary('owner-written');
+    await this.boundary('complete'); return { id: item.id, value };
   }
 }

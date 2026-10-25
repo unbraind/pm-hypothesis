@@ -106,12 +106,11 @@ test('hypothesis source shape and canonical owner identities are validated on re
 });
 
 test('unchanged admission revalidates the current owner after a competing revision', async t => {
-  const f = await incident(t); const fact = await observe(f.investigation, 'seed', 'yes', f.options); let injected = false;
-  const result = await observe(f.investigation, 'seed', 'yes', { ...f.options, boundary: async point => {
+  const f = await incident(t); await observe(f.investigation, 'seed', 'yes', f.options); let injected = false;
+  await assert.rejects(observe(f.investigation, 'seed', 'yes', { ...f.options, boundary: async point => {
     if (point === 'admission-ready' && !injected) { injected = true; await observe(f.investigation, 'other', 'yes', f.options); }
-  } });
-  assert.equal(result.observation, fact.observation); assert.equal(injected, true);
-  assert.equal(result.revision, (await matrix(f.investigation, f.options)).revision);
+  } }), { code: 'conflict' });
+  assert.equal(injected, true);
 });
 
 test('removed observation sources refuse under the same admission precondition', t => sourceRefusal(t, (fixture, id) => fixture.client.delete(id)));

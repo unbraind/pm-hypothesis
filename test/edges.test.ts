@@ -71,11 +71,11 @@ test('real schema conflicts fail closed and stale expected revisions never chang
   await assert.rejects(new Store(f.options).register(), { code: 'schema' });
 });
 
-test('bounded contention retries refuse without losing any of twelve competing observations', async t => {
+test('owner contention refuses without rebasing the invocation', async t => {
   const f = await tracker(t); let serial = 0;
   await assert.rejects(observe(f.investigation, 'target', 'value', { ...f.options, boundary: async point => { if (point === 'owner-read') await observe(f.investigation, 'competing', String(++serial), f.options); } }), { code: 'conflict' });
   const final = state((await new Store(f.options).get(f.investigation)).hypothesis_state);
-  assert.equal(final.observations.length, 12); assert.equal(serial, 12);
+  assert.equal(final.observations.length, 1); assert.equal(serial, 1);
 });
 
 test('public API gives safe SDK refusals and remote declarations refuse before effects', async t => {
@@ -103,13 +103,13 @@ test('CAS rechecks the revision at the SDK lock boundary', async t => {
   const f = await tracker(t); let injected = false;
   const first = await observe(f.investigation, 'seed', 'yes', f.options);
   const store = new Store(f.options);
-  await observe(f.investigation, 'target', 'yes', { ...f.options, onTransition: async event => {
+  await assert.rejects(observe(f.investigation, 'target', 'yes', { ...f.options, onTransition: async event => {
     if (event.transition === 'prepared' && event.transactionId.includes('-owner-') && !injected) {
       injected = true; const current = state((await store.get(f.investigation)).hypothesis_state); current.revision++;
       // Preserve the source set while forcing a fresh owner revision under the SDK guard.
       const edits = { message: 'Synthetic interleaved owner edit', hypothesisState: JSON.stringify(current) }; await f.client.update(f.investigation, edits);
     }
-  } });
+  } }), { code: 'conflict' });
   const result = state((await store.get(f.investigation)).hypothesis_state);
-  assert.equal(injected, true); assert.equal(result.observations.length, 2); assert.ok(result.observations.some(entry => entry.id === first.observation));
+  assert.equal(injected, true); assert.equal(result.observations.length, 1); assert.ok(result.observations.some(entry => entry.id === first.observation));
 });

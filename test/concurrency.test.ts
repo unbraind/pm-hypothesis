@@ -37,7 +37,9 @@ for (const operation of operations) {
   for (const boundary of boundaries) {
     test(`${operation}: interleaving at ${boundary} preserves both writers`, async t => {
       const f = await setup(t, operation); let injected = false;
-      await f.run({ ...f.options, boundary: async point => { if (point === boundary && !injected) { injected = true; await f.competitor(); } } });
+      const action = f.run({ ...f.options, boundary: async point => { if (point === boundary && !injected) { injected = true; await f.competitor(); } } });
+      if (boundary === 'owner-written' || boundary === 'complete') await action;
+      else { await assert.rejects(action, { code: 'conflict' }); await f.run(f.options); }
       assert.equal(injected, true); await f.check();
     });
     test(`${operation}: crash at ${boundary}, competing writer, rerun converges`, async t => {
@@ -50,7 +52,7 @@ for (const operation of operations) {
     for (const target of operation === 'observe' ? ['record', 'owner'] : ['owner']) {
       test(`${operation}: SDK ${target} ${transition} queues competing conditional writer`, async t => {
         const f = await setup(t, operation); let pending: Promise<unknown> | undefined;
-        await f.run({ ...f.options, onTransition: async event => { if (event.transition === transition && event.transactionId.includes(`-${target}-`) && pending === undefined) pending = f.competitor(); } });
+        await f.run({ ...f.options, onTransition: async event => { if (event.transition === transition && event.transactionId.includes(`-${target}-`) && pending === undefined) pending = f.competitor().catch(error => { assert.equal(error.code, 'conflict'); return f.competitor(); }); } });
         assert.ok(pending); await pending; await f.check();
       });
       test(`${operation}: SDK ${target} ${transition} crash revalidates current state`, async t => {
@@ -64,7 +66,7 @@ for (const operation of operations) {
 
 test('conditional conclusion rechecks alternatives after another investigator adds a cause', async t => {
   const f = await incident(t); let injected = false;
-  await assert.rejects(conclude(f.investigation, f.b, 'Must recheck', { ...f.options, acceptViable: [f.a, f.c], boundary: async point => { if (point === 'owner-read' && !injected) { injected = true; await add(f.investigation, 'New competing cause', [{ observation: 'runner', value: 'macos' }], f.options); } } }), { code: 'viable' });
+  await assert.rejects(conclude(f.investigation, f.b, 'Must recheck', { ...f.options, acceptViable: [f.a, f.c], boundary: async point => { if (point === 'owner-read' && !injected) { injected = true; await add(f.investigation, 'New competing cause', [{ observation: 'runner', value: 'macos' }], f.options); } } }), { code: 'conflict' });
   assert.equal(state((await new Store(f.options).get(f.investigation)).hypothesis_state).conclusion, undefined);
 });
 
