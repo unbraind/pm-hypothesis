@@ -12,7 +12,7 @@ export async function open(title: string, options: Options & { item?: string }) 
   const prefix = (await readSettings(options.workspace)).id_prefix;
   requireInput(typeof prefix === 'string', 'Tracker prefix is missing');
   const id = options.item ?? `${prefix.replace(/-$/, '')}-inv-${digest([title, options.operationId])}`;
-  if (options.item === undefined) await store.record(id, 'Question', title, JSON.stringify({ kind: 'investigation', title }));
+  if (options.item === undefined) await store.record(id, 'Question', title, JSON.stringify({ kind: 'investigation', id, title }));
   const item = await store.get(id); ownerType(item.type);
   if (item.hypothesis_state === undefined) await store.commit(item, { version: 1, revision: 0, hypotheses: [], observations: [] }, 'Opened differential investigation');
   else state(item.hypothesis_state);
@@ -25,7 +25,7 @@ export async function add(investigation: string, statement: string, predictions:
   requireInput(new Set(predictions.map(entry => entry.observation)).size === predictions.length, 'Each observation key needs one prediction per hypothesis');
   const store = new Store(options); const owner = await store.get(investigation); ownerType(owner.type); store.expected(state(owner.hypothesis_state));
   const id = `${investigation}-h-${digest([statement, predictions, options.operationId])}`;
-  await store.record(id, 'Question', statement, JSON.stringify({ kind: 'hypothesis', statement, predictions }), investigation);
+  await store.record(id, 'Question', statement, JSON.stringify({ kind: 'hypothesis', id, investigation, statement, predictions }), investigation);
   const value = await store.mutate(investigation, current => {
     if (current.hypotheses.some(entry => entry.id === id)) return undefined;
     current.hypotheses.push({ id, statement, predictions }); return `Added hypothesis ${id}`;
@@ -56,7 +56,7 @@ export async function observe(investigation: string, observation: string, value:
   if (options.when !== undefined) requireInput(/^\d{4}-\d{2}-\d{2}T/.test(options.when) && Number.isFinite(Date.parse(options.when)), 'Observation time must be an ISO timestamp');
   const owner = await store.get(investigation); store.expected(state(owner.hypothesis_state));
   const id = `${investigation}-o-${digest([observation, value, status, who, how, options.when, options.evidence, options.operationId])}`;
-  const payload = JSON.stringify({ kind: 'observation', observation, value, status, who, how, when: options.when, evidence: options.evidence });
+  const payload = JSON.stringify({ kind: 'observation', id, investigation, observation, value, status, who, how, when: options.when, evidence: options.evidence });
   await store.record(id, 'Test', `Observation: ${observation}`, payload, investigation);
   const record = await store.get(id); requireInput(typeof record.created_at === 'string', 'Observation record time is missing');
   const fact: Observation = { id, observation, value, status, who, when: options.when ?? record.created_at, how, evidence: options.evidence, evidenceStatus: evidenceStatus(options.evidence) };

@@ -6,14 +6,15 @@ status: in_progress
 priority: 2
 tags: []
 created_at: "2026-10-25T08:13:00.860Z"
-updated_at: "2026-10-25T08:34:02.813Z"
+updated_at: "2026-10-25T08:38:16.949Z"
 assignee: codex-agent
 claim_principal: codex-agent
 author: codex-agent
 acceptance_criteria: "Viable and unknown hypotheses, witnesses, open predictions and next request within the requested token budget including omission receipt."
 parent: pm-hypothesis-build
-comments[1]{created_at,author,text}:
+comments[2]{created_at,author,text}:
   "2026-10-25T08:34:02.812Z",codex-agent,"Public incident proof: five hypotheses, ten observations, matrix after each fact. Resume 1394 estimated tokens, 11 returned rows and 5 omitted; every eliminated explanation has a witness. Full native transcript 35824 bytes / 8956 estimated tokens. One public GitHub read and 56 in-process API calls. Scratch tracker removed."
+  "2026-10-25T08:38:16.949Z",codex-agent,"Updated public corpus measurement after adding explicit native source identity and owner scope: 37913 UTF-8 bytes / 9479 estimated tokens; resume remains 1394 tokens with 11 rows and 5 explicit omissions. All four eliminated explanations have a returned witness. Public read count remains 1 and in-process API calls 56."
 files[3]{path,scope}:
   src/core.ts,project
   src/hypothesis.ts,project

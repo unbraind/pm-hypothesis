@@ -77,3 +77,15 @@ test('open attaches only native owners, recovers its own identity and validates 
   assert.equal((await add(f.investigation, 'Repeated', [{ observation: 'x', value: 'y' }], f.options)).revision, repeated.revision);
   const store = new Store(f.options); const raw = (await store.get(f.investigation)).hypothesis_state; assert.equal(state(raw).version, 1);
 });
+
+test('separate investigations admit identical explanations and facts without cross-owner collisions', async t => {
+  const f = await tracker(t);
+  const first = f.investigation;
+  const second = (await open('Synthetic CI failure', { ...f.options, operationId: 'second-incident' })).investigation;
+  assert.notEqual(first, second);
+  for (const investigation of [first, second]) {
+    await add(investigation, 'Same cause', [{ observation: 'same', value: 'fact' }], f.options);
+    await observe(investigation, 'same', 'fact', f.options);
+    assert.equal((await matrix(investigation, f.options)).rows[0].status, 'viable');
+  }
+});

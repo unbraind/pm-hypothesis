@@ -10,7 +10,7 @@ The package uses public pm SDK APIs for schema, settings, native items, parent l
 
 Linked Question hypotheses and linked Test observations hold immutable `hypothesis_record` source envelopes. Original fact time uses an explicit ISO time or the native source record's creation time. Attribution uses SDK author precedence and tracker settings. The owner's admission may change while its original Test provenance remains intact. Native comments record owner changes in the same conditional mutation. They contain record ids rather than repeated untrusted fact bodies.
 
-Stable ids hash intent with an optional caller operation identity. Prefix normalization follows tracker settings. Exact repeated intent is idempotent; a separate repeated event needs a separate operation identity. Both original data and prediction equality remain byte-sensitive. Rendering escapes terminal controls and markup characters without changing stored facts; nested data is always structured output, never an executable prompt.
+Stable ids hash intent with an optional caller operation identity. Every immutable source envelope includes its native identity and owner scope, so the SDK unique-key guard cannot conflate identical facts or explanations from separate investigations. Prefix normalization follows tracker settings. Exact repeated intent is idempotent; a separate repeated event needs a separate operation identity. Both original data and prediction equality remain byte-sensitive. Rendering escapes terminal controls and markup characters without changing stored facts; nested data is always structured output, never an executable prompt.
 
 ## Matrix and conclusion
 

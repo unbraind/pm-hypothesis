@@ -94,7 +94,7 @@ The published SDK's conditional transaction helper currently takes a tracker roo
 
 ## Evidence and verification
 
-The [public incident proof](docs/real-data.md) reconstructs a failed public fleet CI run with five explanations and ten admitted observations. It reports every matrix, per-fact eliminations, the next-request sequence, resume tokens, full native-record transcript bytes/4 and calls. The measured packet is **1,394 estimated tokens** with five omitted rows, versus **35,824 UTF-8 bytes / 8,956 estimated tokens** for the full native-record transcript. It includes every survivor and at least one witness for each eliminated explanation. The proof used one GitHub read and 56 in-process SDK/API calls. Only public `gh run view` output is used. The scratch tracker is removed, and normal test fixtures are synthetic.
+The [public incident proof](docs/real-data.md) reconstructs a failed public fleet CI run with five explanations and ten admitted observations. It reports every matrix, per-fact eliminations, the next-request sequence, resume tokens, full native-record transcript bytes/4 and calls. The measured packet is **1,394 estimated tokens** with five omitted rows, versus **37,913 UTF-8 bytes / 9,479 estimated tokens** for the full native-record transcript. It includes every survivor and at least one witness for each eliminated explanation. The proof used one GitHub read and 56 in-process SDK/API calls. Only public `gh run view` output is used. The scratch tracker is removed, and normal test fixtures are synthetic.
 
 ```sh
 npm run release:check
