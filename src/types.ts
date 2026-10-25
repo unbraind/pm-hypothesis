@@ -15,6 +15,7 @@ export type Boundary = 'record-read' | 'record-written' | 'owner-read' | 'owner-
 /** Tracker binding; a host client may be injected for reads and extension discovery. */
 export interface Options {
   workspace: string;
+  backend?: 'filesystem' | 'remote';
   author?: string;
   client?: PmClient;
   expectedRevision?: number;
@@ -33,4 +34,4 @@ export interface Request { observation: string; pairs: number; groups: { value: 
 /** Bounded output with an exact count of withheld rows from a complete owner read. */
 export interface Packet<T> { investigation: string; revision: number; rows: T[]; receipt: { sourceComplete: true; returned: number; omitted: number; complete: boolean; restore: string; estimator: string }; estimatedTokens: number }
 /** Resume rows remain discriminated data, never executable instructions. */
-export type ResumeRow = { kind: 'next'; request: Request | null } | { kind: 'hypothesis'; hypothesis: MatrixRow } | { kind: 'conclusion'; conclusion: Conclusion; stale: boolean };
+export type ResumeRow = { kind: 'next'; request: Request | null } | { kind: 'hypothesis'; hypothesis: Pick<MatrixRow, 'id' | 'statement' | 'status' | 'open'> } | { kind: 'witness'; hypothesis: string; observation: string; key: string; expected: string; actual: string; who: string; when: string; how: string; evidence?: string } | { kind: 'conclusion'; conclusion: Conclusion; stale: boolean };

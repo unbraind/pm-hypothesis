@@ -6,10 +6,22 @@ status: in_progress
 priority: 2
 tags: []
 created_at: "2026-10-25T08:13:07.271Z"
-updated_at: "2026-10-25T08:13:10.532Z"
+updated_at: "2026-10-25T08:34:49.796Z"
 assignee: codex-agent
 claim_principal: codex-agent
 author: codex-agent
 acceptance_criteria: "Every write revalidates current expected revision; retry and crash convergence without duplicates; interleavings at every observation, withdrawal and conclusion boundary."
 parent: pm-hypothesis-build
+comments[2]{created_at,author,text}:
+  "2026-10-25T08:18:53.546Z",codex-agent,Each journal contains one target. Current owner field is its expected revision; retry recomputes from a fresh read. Immutable source records are revalidated before dependent owner work. Exhaustive package and SDK transition crash/interleaving cases are running.
+  "2026-10-25T08:34:49.796Z",codex-agent,Exhaustive initial boundary suite passed 64/64 plus seeded 100-set property test. Added native edit cases prove source revalidation and actual SDK CAS refusal/retry between the final owner read and commit. No frozen multi-target plan is replayed; single-target journal dependencies stop on conflict.
+files[2]{path,scope}:
+  src/store.ts,project
+  test/concurrency.test.ts,project
+tests[1]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
+  "node --test --test-name-pattern=\"conditional conclusion rechecks\" test/concurrency.test.ts",project,codex-agent,"2026-10-25T08:33:28.636Z",local_mutation,feat/hypothesis
+docs[3]{path,scope}:
+  ARCHITECTURE.md,project
+  docs/real-data.md,project
+  README.md,project
 body: ""

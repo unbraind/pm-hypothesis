@@ -6,10 +6,26 @@ status: in_progress
 priority: 2
 tags: []
 created_at: "2026-10-25T08:13:12.226Z"
-updated_at: "2026-10-25T08:13:15.902Z"
+updated_at: "2026-10-25T08:34:03.958Z"
 assignee: codex-agent
 claim_principal: codex-agent
 author: codex-agent
 acceptance_criteria: "Inert untrusted data, typed remedies, optional host-discovered citations, gitless packed npm/Bun/npx/bunx acceptance, complete gates and public-data measurement."
 parent: pm-hypothesis-build
+comments[1]{created_at,author,text}:
+  "2026-10-25T08:34:03.957Z",codex-agent,"Packed npm/npx and native Bun/bunx journeys passed 2/2; genuine Git-free host commands passed. Optional evidence support is detected from active host registrations without importing the sibling. Remote declarations refuse mutations before effects: SDK conditional item transactions remain root-bound; no remote mutation conformance is claimed."
+files[7]{path,scope}:
+  src/commands.ts,project
+  src/core.ts,project
+  test/commands.test.ts,project
+  test/edges.test.ts,project
+  test/gitless.test.ts,project
+  test/install.acceptance.ts,project
+  test/real-data.acceptance.ts,project
+tests[1]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
+  "node --test --test-name-pattern=\"untrusted text\" test/edges.test.ts",project,codex-agent,"2026-10-25T08:33:35.803Z",local_mutation,feat/hypothesis
+docs[3]{path,scope}:
+  ARCHITECTURE.md,project
+  docs/real-data.md,project
+  README.md,project
 body: ""

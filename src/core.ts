@@ -1,0 +1,55 @@
+import { createHash } from 'node:crypto';
+import { WorkspaceTransactionInterruptedError } from '@unbrained/pm-cli/sdk';
+import { encode } from '@toon-format/toon';
+import type { Packet } from './types.ts';
+
+/** Typed refusal shared by SDK and CLI, with safe diagnostics and a concrete remedy. */
+export class HypothesisError extends Error {
+  /** Classify the refusal for embedded callers. */
+  readonly code: string;
+  /** Describe the next permitted action. */
+  readonly remedy: string;
+  /** Retain no private SDK diagnostics. */
+  constructor(code: string, message: string, remedy: string) { super(message); this.name = 'HypothesisError'; this.code = code; this.remedy = remedy; }
+}
+/** Enforce a safe package contract without echoing untrusted values. */
+export function requireInput(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new HypothesisError('invalid', message, 'Use documented operands and bounds; read pm hypothesis --help');
+}
+/** Escape terminal controls, markup and line breaks while retaining their exact data identity. */
+export function inert(value: string): string {
+  return value.replace(/[\u0000-\u001f\u007f-\u009f<>`]/g, char => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`);
+}
+/** Validate and render a bounded data string; command-like text is always quoted data. */
+export function data(value: string): string { requireInput(typeof value === 'string' && value.trim().length > 0 && value.length <= 8192, 'Text must contain 1 to 8192 characters'); return value; }
+/** Stable intent identities support interrupted retry without relying on a wall clock. */
+export function digest(value: unknown): string { return createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0, 24); }
+/** Estimate the larger actual default host JSON and TOON representations, including newline. */
+export function tokens(value: unknown): number { return Math.ceil(Math.max(Buffer.byteLength(JSON.stringify(value, null, 2) + '\n'), Buffer.byteLength(encode(value) + '\n')) / 4); }
+/** Stabilize the self-inclusive byte estimate before enforcing the bound. */
+function account<T>(value: Packet<T>): Packet<T> { let count = tokens(value); while (value.estimatedTokens !== count) { value.estimatedTokens = count; count = tokens(value); } return value; }
+/** Include a deterministic prefix of rows and an omission receipt in the requested budget. */
+export function packet<T>(investigation: string, revision: number, rows: T[], budget: number, restore: string): Packet<T> {
+  requireInput(Number.isSafeInteger(budget) && budget > 0 && budget <= 1_000_000, 'Budget must be an integer from 1 to 1000000');
+  const make = (selected: T[]): Packet<T> => account({ investigation, revision, rows: selected, receipt: { sourceComplete: true, returned: selected.length, omitted: rows.length - selected.length, complete: selected.length === rows.length, restore, estimator: 'ceil(max(json,toon)_utf8_bytes/4)' }, estimatedTokens: 0 });
+  let result = make([]);
+  if (result.estimatedTokens > budget) throw new HypothesisError('budget', 'Budget cannot hold the omission receipt', 'Increase --budget');
+  for (const row of rows) { const next = make([...result.rows, row]); if (next.estimatedTokens > budget) break; result = next; }
+  return result;
+}
+
+/** Recursively render strings as inert data without changing stored equality semantics. */
+export function safe<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value, (_key, entry: unknown) => typeof entry === 'string' ? inert(entry) : entry)) as T;
+}
+
+/** Adapt public SDK functions to typed refusals while preserving explicit crash-test faults. */
+export function guarded<Args extends unknown[], Result>(operation: (...args: Args) => Promise<Result>): (...args: Args) => Promise<Result> {
+  return async (...args: Args): Promise<Result> => {
+    try { return await operation(...args); }
+    catch (error) {
+      if (error instanceof HypothesisError || error instanceof WorkspaceTransactionInterruptedError) throw error;
+      throw new HypothesisError('sdk', 'Investigation SDK operation failed', 'Check pm health, tracker access and schema; retry the same operation');
+    }
+  };
+}
