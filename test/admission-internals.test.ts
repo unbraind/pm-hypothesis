@@ -103,3 +103,9 @@ test('native bootstrap: partial SDK field setup resumes without replacing its re
   const opened = await open('Recovered package setup', f.options); const fields = (await f.client.schemaListFields()).fields; assert.equal(fields.find(field => field.key === 'hypothesis_state')?.description, 'Preserved field declaration'); assert.equal(fields.find(field => field.key === 'hypothesis_record')?.type, 'string');
   const before = await durable(f.workspace); assert.equal((await open('Recovered package setup', f.options)).investigation, opened.investigation); assert.deepEqual(await durable(f.workspace), before);
 });
+
+/** Create-only embedded batches also bind their full intent without inventing an update match. */
+test('shared conditional helper: standalone native initialization preserves create-only intent on replay', async t => {
+  const f = await tracker(t); const store = new Store(f.options); const first = await store.initialize('hyp-embedded-root', 'Embedded investigation', true); assert.equal(first.id, 'hyp-embedded-root');
+  assert.equal(state((await store.get(first.id)).hypothesis_state).revision, 0); const before = await durable(f.workspace); await store.initialize(first.id, 'Embedded investigation', true); assert.deepEqual(await durable(f.workspace), before);
+});

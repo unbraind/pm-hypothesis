@@ -78,3 +78,20 @@ test('replay declaration: a missing native declaration returns both digests with
   await f.client.create({ id, parent: f.investigation, type: 'Question', title: 'Native source without declaration', createMode: 'progressive' }); const before = await durable(f.workspace);
   await assert.rejects(add(f.investigation, statement, predictions, f.options), error => { assert.ok(error instanceof Error && 'code' in error && error.code === 'declaration_mismatch' && 'details' in error); const details = error.details as { storedDigest: string; requestedDigest: string }; assert.match(details.storedDigest, /^[0-9a-f]{24}$/); assert.notEqual(details.storedDigest, details.requestedDigest); return true; }); assert.deepEqual(await durable(f.workspace), before);
 });
+
+/** Replaying an original intent never reverses its explicit withdrawal or creates a second fact. */
+test('replay declaration: withdrawn observations remain withdrawn with identical durable bytes', async t => {
+  const f = await incident(t); const options = { ...f.options, when: '2026-10-26T00:00:00.000Z', operationId: 'withdrawn-replay' };
+  const fact = await observe(f.investigation, 'install', 'passed', options); const withdrawn = await observe(f.investigation, '', '', { ...f.options, withdraw: fact.observation }); const before = await durable(f.workspace);
+  const replay = await observe(f.investigation, 'install', 'passed', options); assert.equal(replay.observation, fact.observation); assert.equal(replay.revision, withdrawn.revision); assert.deepEqual(await durable(f.workspace), before);
+  const owner = state((await new Store(f.options).get(f.investigation)).hypothesis_state); assert.equal(owner.observations.length, 1); assert.equal(owner.observations[0].status, 'withdrawn'); assert.ok((await matrix(f.investigation, f.options)).rows.every(row => row.status === 'unknown' && row.witnesses.length === 0));
+});
+
+/** Native TOON rejects malformed UTF-16, so invalid inputs must refuse before domain storage. */
+test('native admission: malformed Unicode refuses with typed input errors and no writes', async t => {
+  const f = await tracker(t); const before = await durable(f.workspace);
+  for (const unit of ['\ud800', '\udfff']) {
+    await assert.rejects(add(f.investigation, 'Invalid Unicode key', [{ observation: 'probe-' + unit, value: 'yes' }], f.options), { code: 'invalid' });
+    await assert.rejects(observe(f.investigation, 'probe', 'value-' + unit, f.options), { code: 'invalid' }); assert.deepEqual(await durable(f.workspace), before);
+  }
+});

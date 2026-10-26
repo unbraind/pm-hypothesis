@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 
 /** Behavioral reversions replace only the named implementation branch, never test assertions. */
 const proofs = [
+  { file: 'src/core.ts', label: 'Unicode admission: accept strings the native TOON transport cannot encode', before: ' && value.isWellFormed()', after: '', test: 'test/admission.test.ts', pattern: '^native admission: malformed Unicode' },
   { file: 'src/store.ts', label: 'native creation policy: apply an unused default to existing-source replays', before: 'if (current === undefined && !usableStatus(schema.statuses.open_status, schema))', after: 'if (!usableStatus(schema.statuses.open_status, schema))', test: 'test/admission-internals.test.ts', pattern: '^native registry workflow:' },
   { file: 'src/records.ts', label: 'missing declaration: hash absent SDK data without canonical framing', before: 'JSON.stringify({ type: typeof stored, value: stored })', after: 'JSON.stringify(stored)', test: 'test/admission.test.ts', pattern: '^replay declaration: a missing native' },
   { file: 'src/store.ts', label: 'native registry authority: silently recreate removed types on replay', before: 'if (FIELDS.every(definition => fields.some(field => field.key === definition.name))) return;', after: 'void fields;', test: 'test/admission-internals.test.ts', pattern: '^native bootstrap: installed fields' },

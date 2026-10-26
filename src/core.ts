@@ -23,7 +23,7 @@ export function inert(value: string): string {
   return value.replace(/[\u0000-\u001f\u007f-\u009f<>`]/g, char => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`);
 }
 /** Validate and render a bounded data string; command-like text is always quoted data. */
-export function data(value: string): string { requireInput(typeof value === 'string' && value.trim().length > 0 && value.length <= 8192, 'Text must contain 1 to 8192 characters'); return value; }
+export function data(value: string): string { requireInput(typeof value === 'string' && value.trim().length > 0 && value.length <= 8192 && value.isWellFormed(), 'Text must contain 1 to 8192 well-formed Unicode code units'); return value; }
 /** Stable intent identities support interrupted retry without relying on a wall clock. */
 export function digest(value: unknown): string { return createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0, 24); }
 /** Render control characters reversibly at the wire boundary, preserving decoded identities. */
