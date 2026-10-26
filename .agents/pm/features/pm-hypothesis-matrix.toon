@@ -6,10 +6,20 @@ status: in_progress
 priority: 2
 tags: []
 created_at: "2026-10-25T08:12:48.051Z"
-updated_at: "2026-10-25T08:12:51.893Z"
-assignee: codex-agent
-claim_principal: codex-agent
+updated_at: "2026-10-25T08:46:27.517Z"
 author: codex-agent
 acceptance_criteria: Exact admitted-contradiction witnesses; missing data never eliminates; withdrawal restores only affected explanations; randomized equivalence proof.
 parent: pm-hypothesis-build
+comments[1]{created_at,author,text}:
+  "2026-10-25T08:18:48.612Z",codex-agent,"Acceptance fixture passes: no missing-data elimination, admitted-only contradiction witnesses, independent observation effects and exact withdrawal restoration. Conflicting admitted facts retain all witnesses; no confidence score is used."
+files[3]{path,scope}:
+  src/derive.ts,project
+  test/hypothesis.test.ts,project
+  test/property.test.ts,project
+tests[1]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
+  "node --test --test-name-pattern=\"^acceptance:\" test/hypothesis.test.ts",project,codex-agent,"2026-10-25T08:32:51.768Z",local_mutation,feat/hypothesis
+docs[3]{path,scope}:
+  ARCHITECTURE.md,project
+  docs/real-data.md,project
+  README.md,project
 body: ""

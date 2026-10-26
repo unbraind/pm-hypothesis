@@ -6,10 +6,40 @@ status: in_progress
 priority: 2
 tags: []
 created_at: "2026-10-25T08:13:12.226Z"
-updated_at: "2026-10-25T08:13:15.902Z"
-assignee: codex-agent
-claim_principal: codex-agent
+updated_at: "2026-10-25T14:49:41.838Z"
 author: codex-agent
 acceptance_criteria: "Inert untrusted data, typed remedies, optional host-discovered citations, gitless packed npm/Bun/npx/bunx acceptance, complete gates and public-data measurement."
 parent: pm-hypothesis-build
+comments[2]{created_at,author,text}:
+  "2026-10-25T08:34:03.957Z",codex-agent,"Packed npm/npx and native Bun/bunx journeys passed 2/2; genuine Git-free host commands passed. Optional evidence support is detected from active host registrations without importing the sibling. Remote declarations refuse mutations before effects: SDK conditional item transactions remain root-bound; no remote mutation conformance is claimed."
+  "2026-10-25T14:40:00.404Z",codex-agent,"PR #1 identity class: reusable keys, values, ids, author ids and citations remain decoded-byte-exact; only human display descriptions are escaped. Scoped host JSON/TOON renderers quote control bytes reversibly. The seeded property ran 64 next-to-observe round trips including markup, quotes, newlines, C0/C1 ANSI, DEL and Unicode; native TOON/JSON smoke passed. Reverting safe to blanket string escaping fails the probe identity assertion."
+files[8]{path,scope}:
+  src/commands.ts,project
+  src/core.ts,project
+  test/commands.test.ts,project
+  test/edges.test.ts,project
+  test/gitless.test.ts,project
+  test/install.acceptance.ts,project
+  test/real-data.acceptance.ts,project
+  test/roundtrip.test.ts,project
+tests[2]:
+  - command: "node --test --test-name-pattern=\"untrusted text\" test/edges.test.ts"
+    scope: project
+    provenance:
+      author: codex-agent
+      created_at: "2026-10-25T08:33:35.803Z"
+      source_kind: local_mutation
+      source_ref: feat/hypothesis
+  - command: "node --test --test-name-pattern=\"native TOON/JSON next\" test/roundtrip.test.ts"
+    scope: project
+    timeout_seconds: 180
+    provenance:
+      author: codex-agent
+      created_at: "2026-10-25T14:46:45.334Z"
+      source_kind: local_mutation
+      source_ref: feat/hypothesis
+docs[3]{path,scope}:
+  ARCHITECTURE.md,project
+  docs/real-data.md,project
+  README.md,project
 body: ""
