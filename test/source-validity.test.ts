@@ -125,7 +125,7 @@ test('owner provenance cannot be changed and then silently reused by the same in
     const changed = structuredClone(original); changed.observations[0][key] = value;
     const update = { hypothesisState: JSON.stringify(changed), message: 'Synthetic changed owner provenance' }; await f.client.update(f.investigation, update);
     const checkpoint = await durable(f.workspace);
-    await assert.rejects(observe(f.investigation, 'install', 'passed', { ...f.options, when }), { code: 'conflict' }); assert.deepEqual(await durable(f.workspace), checkpoint);
+    await assert.rejects(observe(f.investigation, 'install', 'passed', { ...f.options, when }), { code: 'declaration_mismatch' }); assert.deepEqual(await durable(f.workspace), checkpoint);
   }
 });
 

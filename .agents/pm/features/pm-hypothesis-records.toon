@@ -2,15 +2,16 @@ id: pm-hypothesis-records
 title: Records investigation context
 description: ""
 type: Feature
+pm_format_version: 2
 status: in_progress
 priority: 2
-tags: []
+tags[1]: "gh:unbraind/pm-hypothesis#5"
 created_at: "2026-10-25T08:12:42.151Z"
-updated_at: "2026-10-25T22:04:35.860Z"
+updated_at: "2026-10-26T12:23:08.766Z"
 author: codex-agent
 acceptance_criteria: "Native Question investigations, linked hypotheses and Test facts with provenance and registered schema; SDK-only storage without git."
 parent: pm-hypothesis-build
-comments[9]{created_at,author,text}:
+comments[15]{created_at,author,text}:
   "2026-10-25T08:18:39.486Z",codex-agent,"Implemented registered hypothesis_state and immutable hypothesis_record fields, SDK-registered Question/Test types, native parent links and audit comments. Minimal SDK trackers omit Question/Test, so open registers them explicitly. Reads certify native record discovery and load the complete atomic owner."
   "2026-10-25T08:38:15.849Z",codex-agent,"Cross-investigation regression was red against the implementation commit: the global SDK unique-key guard conflated equal source payloads. Source envelopes now include their native id and owner, so identical titles with different operation identities, equal explanations and equal facts stay independent. The dedicated real-tracker scenario is green; no prior records or histories were rewritten."
   "2026-10-25T15:07:25.299Z",codex-agent,"Acquisition options are copied before async boundaries, and Store owns a copy of workspace/author/revision options. A record-written callback changing the caller evidence, time and actor cannot change the payload admitted from that source. The real SDK regression compares admitted provenance against the native source envelope. Reverting the acquisition snapshot fails this assertion."
@@ -20,18 +21,31 @@ comments[9]{created_at,author,text}:
   "2026-10-25T21:56:43.697Z",codex-agent,"Latest Node 22 CI passes all 1528 tests and 100/100/100/100 coverage across 18 source files, including the complete corrected 1312-case matrix. Packed npm/npx and Bun/bunx acceptance then fail at hypothesis open with an SDK refusal. Reproducing using an isolated packed consumer and inspecting the underlying exception only in disposable local diagnostics; public refusals remain sanitized. All other Node 22 release steps pass. No threshold or test scope will be reduced."
   "2026-10-25T22:00:09.008Z",codex-agent,"Packed root cause: SDK previewItemMutations rejects normal executable symlinks under managed extension dependencies with transaction_preview_non_regular_file. It has no public scope/exclusion option. Replaced full-tracker cloning with public resolveTransactionSchema, resolveRuntimeFieldRegistry and parseItemMutationBatch for schema-aware shape/field routing; all captured target checks, prepared-time revalidation, fenced sources and the single atomic commit remain. No links are followed, removed or modified. A real native tracker with a synthetic managed executable link fails before the change and passes after it; both fixed round-3 cases also remain green. This SDK preview gap will be reported in the final handoff, without upstream writes or a dependency bump."
   "2026-10-25T22:04:34.554Z",codex-agent,"Compatibility verification: npm run test:install passes 2/2 packed journeys (npm/npx and Bun/bunx), with no failure/skip; both execute open/add/observe/matrix/next/resume/conclude/withdraw plus in-process SDK reads from the tarball in nongit consumers. The tracker-linked managed-link and fixed-review regression command passes 3/3. The final disposable-copy revert run passes all 13 proofs, including restoration of the SDK whole-tracker preview, which fails the managed-link regression, and the create-before-validate, edited-provenance and source-dropping retry reversions. Exact implementation bytes are restored after every negative test and the scratch copy is removed. Typecheck, lint, zero duplication (0/3434 lines) and 69 documented declarations across 18 sources pass. New native batch validation changes only schema-aware planning; all owner/source CAS and atomic commit fences remain."
-files[10]{path,scope}:
+  "2026-10-26T11:15:18.683Z",codex-agent,"Implementation now runs native SDK previewItemMutations on the exact commit batch. Types, field projections and status-role policy are captured through SDK registries and checked again with item preconditions. Missing Test, native required-field failures and incompatible field metadata refuse before source-tracker history writes. Source admission resolves registered aliases and all terminal roles; canonical replay compares stored owner declarations with requested declarations and returns declaration_mismatch with both digests. SDK/TOON/JSON data strings remain exact, including statement, reason and acquisition method; transport serialization owns escaping. Fixed regressions pass 8/8, including owner provenance, managed links and both original issue reproductions."
+  "2026-10-26T11:45:31.637Z",codex-agent,"The PM-linked native/fixed suite passes 13 of 13; packed npm/npx and Bun/bunx journeys both pass. One older atomic/source linked command exceeded its existing 120-second limit during parallel model/coverage verification. Increased that command timeout to 600 seconds without changing assertions or gate thresholds; it will be rerun separately. Test-result tracking is disabled by tracker policy, so explicit comments retain results."
+  "2026-10-26T11:46:45.832Z",codex-agent,"Revert proof, native admission class: in a disposable copy, bypassed only validateBatch's native preview call; the missing-Test fixed case failed its durable byte comparison because apply admitted and compensated before the type error. Separately restored status acceptance for withdrawn native sources; the withdrawn-Question fixed case failed its expected typed refusal. Restored exact implementation bytes after each behavioral failure. The unchanged implementation passes both fixed cases; native required-field validation also leaves the tracker byte-identical."
+  "2026-10-26T11:46:49.204Z",codex-agent,"Revert proof, replay class: removed only add's canonical stored/requested owner declaration comparison. Both edited-statement and edited-prediction replays failed their expected declaration_mismatch assertions. With the comparison restored, equal reordered prediction declarations are no-ops and differing declarations return both digests with a repair remedy."
+  "2026-10-26T11:46:52.121Z",codex-agent,"Revert proof, structured-data class (issue 5): restored string escaping inside safe, leaving tests unchanged. The public next-to-observe fixed case failed its expected viable result. SDK data now remains exact and control-byte escaping occurs only in reversible JSON/TOON serialization; native item titles are display labels. Reverting only unbounded authoritative reads also fails the long-record regression, which otherwise proves three eliminations and one survivor without interpreting compacted SDK string summaries as domain records."
+  "2026-10-26T12:22:50.046Z",codex-agent,"Additional class regressions pass: byte-distinct collating Unicode keys have one canonical replay intent; a missing native payload gives declaration_mismatch with both digests instead of an SDK TypeError; declarations are compared by canonical data, with digests serving only diagnostics. Removing canonical framing fails the missing-payload test, and removing the Unicode byte tie-break fails the replay identity test. Native bootstrap validates incompatible fields before setup, preserves removed types once installed, and recovers partial field setup. Reverting registry authority fails the no-schema-repair test. A terminal creation default refuses new records while leaving valid existing-source replays unchanged; its behavioral reversion also fails. Twenty baseline behavioral reversions plus these two selected new reversions have passed in disposable copies with exact restoration."
+files[17]{path,scope}:
   index.ts,project
+  src/admission.ts,project
+  src/attempts.ts,project
+  src/core.ts,project
   src/hypothesis.ts,project
   src/records.ts,project
   src/store.ts,project
   src/types.ts,project
+  test/admission-internals.test.ts,project
+  test/admission-model.test.ts,project
+  test/admission.test.ts,project
   test/atomic-sources.test.ts,project
   test/hypothesis.test.ts,project
+  test/reference.ts,project
   test/review-classes.test.ts,project
   test/source-model.test.ts,project
   test/source-validity.test.ts,project
-tests[4]:
+tests[5]:
   - command: "node --test --test-name-pattern=\"open attaches\" test/hypothesis.test.ts"
     scope: project
     provenance:
@@ -49,16 +63,27 @@ tests[4]:
       source_ref: feat/hypothesis
   - command: node --test test/atomic-sources.test.ts test/source-validity.test.ts
     scope: project
+    timeout_seconds: 600
     provenance:
       author: codex-agent
       created_at: "2026-10-25T21:02:42.542Z"
       source_kind: local_mutation
       source_ref: feat/hypothesis
+    updated_by: codex-agent
+    updated_at: "2026-10-26T11:45:29.631Z"
   - command: "node --test --test-name-pattern='^managed extension executable|^atomic command:|^current source invariants:' test/source-validity.test.ts test/atomic-sources.test.ts"
     scope: project
     provenance:
       author: codex-agent
       created_at: "2026-10-25T22:00:12.272Z"
+      source_kind: local_mutation
+      source_ref: feat/hypothesis
+  - command: node --test test/admission.test.ts test/admission-internals.test.ts
+    scope: project
+    timeout_seconds: 300
+    provenance:
+      author: codex-agent
+      created_at: "2026-10-26T11:20:41.583Z"
       source_kind: local_mutation
       source_ref: feat/hypothesis
 docs[3]{path,scope}:

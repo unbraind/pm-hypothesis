@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { isDeepStrictEqual } from 'node:util';
 import { after, describe, test } from 'node:test';
-import { add, conclude, matrix, nextRequest, observe, open, resumePacket, show } from '../index.ts';
-import type { Boundary, Hypothesis, Investigation, MatrixRow, Observation, Options, Prediction, Request } from '../index.ts';
+import { add, conclude, nextRequest, observe, open, resumePacket, show } from '../index.ts';
+import type { Boundary, Hypothesis, Investigation, MatrixRow, Observation, Options, Prediction } from '../index.ts';
 import { Store, state } from '../src/store.ts';
 import { incident, durable } from './helpers.ts';
+import { checkedMatrix, referenceRows, referenceRequest as request } from './reference.ts';
 
 const WHEN = '2026-10-25T12:00:00.000Z';
 const POINTS: Boundary[] = ['record-read', 'plan-ready', 'owner-read', 'admission-ready', 'owner-written', 'record-written', 'complete'];
@@ -17,30 +18,8 @@ interface Source { kind: 'hypothesis' | 'observation'; expected: Image; current:
 type Intent = { kind: 'observe' | 'admit'; key: string; value: string; operation: string; status: 'admitted' | 'disputed' } | { kind: 'add'; statement: string; predictions: Prediction[]; operation: string } | { kind: 'withdraw'; id: string } | { kind: 'conclude'; cause: string; accepted: string[]; reason: string } | { kind: 'open' };
 /** Current validity is independent of the production validator and its receipts. */
 function valid(source: Source): boolean { return source.current !== undefined && isDeepStrictEqual(source.current, source.expected); }
-/** Reference elimination uses only admitted, currently-valid facts and declarations. */
-function rows(model: Investigation, sources: Map<string, Source>): MatrixRow[] {
-  const facts = model.observations.filter(fact => fact.status === 'admitted' && valid(sources.get(fact.id)!));
-  return model.hypotheses.map(hypothesis => {
-    if (!valid(sources.get(hypothesis.id)!)) return { ...hypothesis, status: 'invalid' as const, witnesses: [], open: hypothesis.predictions };
-    const witnesses = [];
-    for (const prediction of hypothesis.predictions) for (const fact of facts) if (prediction.observation === fact.observation && prediction.value !== fact.value) witnesses.push({ prediction, observation: fact });
-    const pending = hypothesis.predictions.filter(prediction => facts.every(fact => fact.observation !== prediction.observation));
-    return { ...hypothesis, status: witnesses.length ? 'eliminated' as const : pending.length || !hypothesis.predictions.length ? 'unknown' as const : 'viable' as const, witnesses, open: pending };
-  }).sort((a, b) => a.id.localeCompare(b.id, 'en'));
-}
-/** Count discriminating pairs directly, rather than reusing the production group scorer. */
-function request(matrix: MatrixRow[]): Request | null {
-  const live = matrix.filter(row => row.status === 'unknown' || row.status === 'viable'); const candidates: Request[] = [];
-  for (const key of new Set(live.flatMap(row => row.open.map(prediction => prediction.observation)))) {
-    const values = live.map(row => row.predictions.find(prediction => prediction.observation === key)?.value); let pairs = 0;
-    for (let a = 0; a < live.length; a++) for (let b = a + 1; b < live.length; b++) if (values[a] !== undefined && values[b] !== undefined && values[a] !== values[b]) pairs++;
-    if (pairs) candidates.push({ observation: key, pairs, groups: [...new Set(values.filter(value => value !== undefined))].sort((a, b) => a.localeCompare(b, 'en')).map(value => ({ value, hypotheses: live.filter((_, index) => values[index] === value).map(row => row.id) })), unspecified: live.filter((_, index) => values[index] === undefined).map(row => row.id) });
-  }
-  const bestScore = Math.max(0, ...candidates.map(candidate => candidate.pairs));
-  const best = candidates.filter(candidate => candidate.pairs === bestScore);
-  best.sort((left, right) => Buffer.byteLength(left.observation) === Buffer.byteLength(right.observation) ? left.observation.localeCompare(right.observation, 'en') : Buffer.byteLength(left.observation) - Buffer.byteLength(right.observation));
-  return best.length === 0 ? null : best[0];
-}
+/** Apply the independent oracle to currently-valid native images. */
+function rows(model: Investigation, sources: Map<string, Source>): MatrixRow[] { return referenceRows(model, new Set([...sources].filter(([, source]) => !valid(source)).map(([id]) => id))); }
 /** Reconstruct the documented immutable envelope from reference declarations. */
 function image(investigation: string, entry: Hypothesis | Observation): Image {
   const fact = 'status' in entry;
@@ -69,10 +48,7 @@ for (const [seedIndex, seed] of [0x5eed, 0xc0ffee, 720251025].entries()) test(`r
     const liveIds = (await f.client.listAllComplete()).items.map(item => item.id).sort();
     assert.deepEqual(liveIds, [f.investigation, 'hyp-foreign', ...[...sources].filter(([, source]) => source.current !== undefined).map(([id]) => id)].sort());
     const expected = rows(model, sources); const bad = [...sources].filter(([, source]) => !valid(source)).map(([id]) => id).sort();
-    assert.deepEqual(state((await store.get(f.investigation)).hypothesis_state), model);
-    const actual = await matrix(f.investigation, { ...f.options, budget: 1000000 }); assert.deepEqual(actual.rows, expected);
-    assert.deepEqual((actual.receipt.sourceIssues?.returned ?? []).map(issue => issue.id).sort(), bad);
-    assert.equal(actual.receipt.sourceIssues?.omitted ?? 0, 0);
+    await checkedMatrix(f.investigation, f.options, model, expected, new Set(bad));
     const next = await nextRequest(f.investigation, f.options); assert.deepEqual(next.request, request(expected)); assert.deepEqual(next.sourceIssues.map(issue => issue.id).sort(), bad);
     const full = await show(f.investigation, f.options); assert.deepEqual(full.rows, expected); assert.deepEqual(full.observations, model.observations);
     const broken = invalidBasis(model, sources);

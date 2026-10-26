@@ -30,7 +30,7 @@ test('untrusted text stays exact in storage and inert in terminal/markup output'
   const h = await add(f.investigation, malicious, [{ observation: malicious, value: malicious }], f.options);
   await observe(f.investigation, malicious, malicious, f.options);
   const result = await matrix(f.investigation, f.options); assert.equal(result.rows[0].status, 'viable');
-  assert.equal(result.rows[0].id, h.hypothesis); assert.equal(result.rows[0].statement, inert(malicious));
+  assert.equal(result.rows[0].id, h.hypothesis); assert.equal(result.rows[0].statement, malicious);
   assert.ok(!JSON.stringify(result).includes('\u001b')); assert.equal(result.rows[0].predictions[0].observation, malicious); assert.equal(result.rows[0].predictions[0].value, malicious);
   const persisted = state((await new Store(f.options).get(f.investigation)).hypothesis_state); assert.equal(persisted.hypotheses[0].statement, malicious);
   assert.equal(data('literal \\u001b'), 'literal \\u001b'); assert.notEqual(safe(malicious), 'literal \\u001b');

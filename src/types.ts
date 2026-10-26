@@ -11,7 +11,7 @@ export interface Conclusion { cause: string; reason: string; accepted: string[];
 /** Atomic owner envelope; no cached elimination state can drift from the facts. */
 export interface Investigation { version: 1; revision: number; hypotheses: Hypothesis[]; observations: Observation[]; conclusion?: Conclusion }
 /** Current native source failure; invalid facts never become witnesses. */
-export interface SourceIssue { id: string; kind: 'hypothesis' | 'observation'; reason: 'missing' | 'type' | 'parent' | 'payload' | 'provenance' | 'withdrawn' }
+export interface SourceIssue { id: string; kind: 'hypothesis' | 'observation'; reason: 'schema' | 'missing' | 'type' | 'parent' | 'payload' | 'provenance' | 'withdrawn' }
 /** Deterministic seam around real SDK operations, used for crash/interleaving acceptance. */
 export type Boundary = 'record-read' | 'plan-ready' | 'record-written' | 'owner-read' | 'owner-written' | 'admission-ready' | 'complete';
 /** Tracker binding; a host client may be injected for reads and extension discovery. */

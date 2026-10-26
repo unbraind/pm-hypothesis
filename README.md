@@ -8,15 +8,15 @@ This package is unreleased. Publication requires maintainer approval. The comman
 
 ## Install
 
-Requires Node >=22.18 and pm >=2026.10.24. Development pins pm 2026.10.24.
+Requires Node >=22.18 and pm >=2026.10.26. Development pins pm 2026.10.26 for native batch validation and managed-extension preview support.
 
 ```sh
 npm ci
 npm pack
 # In a separate project; replace package.tgz with the actual packed filename:
-npm install @unbrained/pm-cli@2026.10.24 ./package.tgz
+npm install @unbrained/pm-cli@2026.10.26 ./package.tgz
 # Or:
-bun add @unbrained/pm-cli@2026.10.24 ./package.tgz
+bun add @unbrained/pm-cli@2026.10.26 ./package.tgz
 npx --no-install pm init --prefix incident --defaults
 npx --no-install pm package install ./package.tgz
 # The pm package installer also accepts a package name after publication:
@@ -45,9 +45,9 @@ All commands use host-registered renderers: TOON by default, `--json` for JSON. 
 
 `open` and `add` support `--operation`. Identical intents have stable identities, so retrying an interrupted command does not duplicate facts or explanations. To record a separate occurrence of the same observation, use a different operation identity. Withdrawing a fact keeps its identity; repeating its original observe command preserves the withdrawal. A new fact requires a new operation identity.
 
-`add`, `observe` and `conclude` accept `--expected-revision N`. A mismatch refuses with exit 3. Every mutation captures its owner and source preconditions once. New native records stay in memory until the command submits one SDK multi-item batch containing the owner CAS and all required creates. The SDK validates batch options against the current runtime schema. Preconditions are revalidated before semantic checks, before the batch and under the SDK workspace writer; source leases remain fenced through the whole batch. A conflict writes no planned source or owner change. Repeating an intent uses stable native ids and a fresh transaction plan. Deleted identities are never recreated by retry: restore the native item after review, withdraw the unusable fact, or use a new operation identity.
+`add`, `observe` and `conclude` accept `--expected-revision N`. A mismatch refuses with exit 3. Every mutation captures its owner and source preconditions once. New native records stay in memory until the command submits one SDK multi-item batch containing the owner CAS and all required creates. The SDK previews the exact ordered batch with native creation/update rules in a disposable tracker, then commits that same batch. Schema, field and status-role snapshots are preconditions too. Preconditions are revalidated before semantic checks, before the batch and under the SDK workspace writer; source leases remain fenced through the whole batch. A validation failure writes no native source, owner admission or compensation history. A precondition conflict writes no planned source or owner change. Repeating an intent uses stable native ids and a fresh transaction plan. Deleted identities are never recreated by retry: restore the native item after review, withdraw the unusable fact, or use a new operation identity.
 
-Every matrix, next request, resume packet and conclusion checks current native sources. Wrong type, parent, identity, payload schema, provenance, closure or withdrawal makes a source unusable. Invalid facts never eliminate; invalid hypotheses have `status: invalid` and do not split next requests. Packets report source issues with bounded omissions and a working `hypothesis show` restore command. Active invalid sources refuse conclusion even with `--accept-viable`. `show` marks a recorded conclusion's validity and retains an invalid historical decision as `invalidConclusion`; resume marks it stale. Unknown and viable alternatives still require explicit acknowledgment. Conclusions do not close native items.
+Every matrix, next request, resume packet and conclusion checks current native sources. Wrong type, parent, identity, payload schema, provenance, closure, withdrawal or terminal status role makes a source unusable. Invalid facts never eliminate; invalid hypotheses have `status: invalid` and do not split next requests. Packets report source issues with bounded omissions and a working `hypothesis show` restore command. Active invalid sources refuse conclusion even with `--accept-viable`. `show` marks a recorded conclusion's validity and retains an invalid historical decision as `invalidConclusion`; resume marks it stale. Unknown and viable alternatives still require explicit acknowledgment. Conclusions do not close native items.
 
 `matrix` defaults to 10,000 estimated tokens; `resume` defaults to 1,500. The estimate includes the receipt and the larger of default host JSON/TOON UTF-8 bytes divided by four, rounded up. Output retains deterministic prefix rows and reports exactly how many were withheld. A receipt that cannot fit produces an actionable budget refusal. Every receipt gives an executable `pm hypothesis show <actual-id> --json` command that restores all omitted matrix rows and the full conclusion, including conclusions too large for a bounded resume. `show` is explicitly unbounded. Raising the packet budget is also possible (maximum 1,000,000); there is no silent claim of completeness.
 
@@ -108,4 +108,6 @@ npm run test:revert
 
 Gates enforce all four coverage dimensions at 100%, complete source inventory, docstrings on every source declaration, zero jscpd duplication, fleet ESLint, production audit, allowlisted package contents, generated changelog and attested release workflow. Release is dispatch-only and requires the maintainer's enabled variable.
 
-Exit codes: **0** success (bounded omissions remain explicit), **2** invalid input, schema, absent observation, budget, unresolved alternatives or SDK refusal, **3** changed owner/source revision or bounded source-lock contention. No command executes a proposed evidence request.
+Exit codes: **0** success (bounded omissions remain explicit), **2** invalid input, schema, absent observation, budget, unresolved alternatives or SDK refusal, **3** changed owner/source/schema revision, bounded source-lock contention, or `declaration_mismatch` (with both declaration digests). No command executes a proposed evidence request.
+
+Replays compare canonical declarations rather than ids alone; a byte tie-break distinguishes Unicode keys that collate equally. Once package fields are installed, opening context preserves native type removals instead of silently repairing schema. All SDK and JSON/TOON data fields remain exact; serialization escapes terminal controls reversibly. Native item titles are display labels. Recovery records superseded attempts in the package runtime cache through SDK primitives and plans against current item/schema preconditions. The SDK journal-management gap is tracked by pm-cli#1597; no journal is deleted or blindly replayed.

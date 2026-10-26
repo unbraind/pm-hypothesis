@@ -9,8 +9,10 @@ export class HypothesisError extends Error {
   readonly code: string;
   /** Describe the next permitted action. */
   readonly remedy: string;
+  /** Safe structured comparison evidence, containing digests rather than untrusted declarations. */
+  readonly details?: Record<string, string>;
   /** Retain no private SDK diagnostics. */
-  constructor(code: string, message: string, remedy: string) { super(message); this.name = 'HypothesisError'; this.code = code; this.remedy = remedy; }
+  constructor(code: string, message: string, remedy: string, details?: Record<string, string>) { super(message); this.name = 'HypothesisError'; this.code = code; this.remedy = remedy; this.details = details; }
 }
 /** Enforce a safe package contract without echoing untrusted values. */
 export function requireInput(condition: unknown, message: string): asserts condition {
@@ -56,9 +58,9 @@ export function packet<T>(investigation: string, revision: number, rows: T[], bu
   return result;
 }
 
-/** Escape human display fields only; reusable identities and values stay byte-exact. */
+/** Normalize JSON-compatible envelopes without changing any data string. */
 export function safe<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value, (key, entry: unknown) => typeof entry === 'string' && ['statement', 'reason', 'how'].includes(key) ? inert(entry) : entry)) as T;
+  return JSON.parse(JSON.stringify(value)) as T;
 }
 
 /** Adapt public SDK functions to typed refusals while preserving explicit crash-test faults. */

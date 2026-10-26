@@ -1,9 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import { acquireLockLease, commitItemMutations, EXIT_CODE, getHistoryPath, PmCliError, PmClient, parseItemMutationBatch, readHistorySnapshot, readSettings, resolveRuntimeFieldRegistry, resolveTransactionSchema, selectImportAuthor } from '@unbrained/pm-cli/sdk';
+import { acquireLockLease, commitItemMutations, EXIT_CODE, getHistoryPath, PmCliError, PmClient, readHistorySnapshot, readSettings, selectImportAuthor } from '@unbrained/pm-cli/sdk';
 import type { BulkItemCreateMutation, BulkItemMutation, GetResult, LockLease } from '@unbrained/pm-cli/sdk';
 import type { SchemaFieldDefinition } from '@unbrained/pm-cli/sdk/authoring';
 import { data, digest, HypothesisError, inert, requireInput } from './core.ts';
-import { sourceIssues } from './records.ts';
+import { sameDeclaration, sourceIssues } from './records.ts';
+import { admissionSchema, sameSchema, usableSource, usableStatus, validateBatch } from './admission.ts';
+import type { AdmissionSchema } from './admission.ts';
+import { Attempts } from './attempts.ts';
 import type { SourceSnapshot } from './records.ts';
 import type { Boundary, Investigation, Options } from './types.ts';
 
@@ -40,8 +43,12 @@ export class Store {
   readonly client: PmClient;
   /** Immutable acquisition options for this invocation. */
   readonly options: Options;
+  /** Stable command intent independent of mutable owner/source revisions. */
+  readonly intent?: unknown;
+  /** Registry view captured once for this invocation. */
+  private policy?: AdmissionSchema;
   /** Bind SDK access without cwd or Git discovery. */
-  constructor(options: Options) { this.options = { ...options }; this.client = this.options.client ?? new PmClient({ pmRoot: this.options.workspace, author: this.options.author, noExtensions: true }); }
+  constructor(options: Options, intent?: unknown) { this.intent = intent; this.options = { ...options }; this.client = this.options.client ?? new PmClient({ pmRoot: this.options.workspace, author: this.options.author, noExtensions: true }); }
   /** Refuse unsupported remote mutations before effects. */
   writable(): void { if (this.options.backend === 'remote') throw new HypothesisError('capability', 'The host lacks a backend-owned conditional item mutation service', 'Use a filesystem tracker for writes; injected host clients can still read investigation context'); }
   /** Attribute effects through SDK settings. */
@@ -50,38 +57,58 @@ export class Store {
   expected(value: Investigation): void { if (this.options.expectedRevision !== undefined && this.options.expectedRevision !== value.revision) throw new HypothesisError('conflict', 'Expected investigation revision changed', 'Read matrix and retry with its current revision'); }
   /** Expose boundaries before effects and after the complete batch only. */
   async boundary(point: Boundary): Promise<void> { await this.options.boundary?.(point); }
-  /** Install missing package fields through the SDK; incompatible types refuse. */
+  /** Bootstrap through the SDK; once installed, native registry edits remain authoritative. */
   async register(): Promise<void> {
     this.writable();
+    const fields = (await this.client.schemaListFields()).fields;
+    for (const definition of FIELDS) {
+      const existing = fields.find(entry => entry.key === definition.name);
+      if (existing !== undefined && existing.type !== 'string') throw new HypothesisError('schema', 'Registered hypothesis field has an incompatible type', 'Register hypothesis_state and hypothesis_record as string fields');
+    }
+    if (FIELDS.every(definition => fields.some(field => field.key === definition.name))) return;
     const types = await this.client.schemaList();
     for (const [name, folder] of [['Question', 'questions'], ['Test', 'tests']]) {
       if (![...types.builtin, ...types.custom, ...types.extension].some(type => type.name === name)) await this.client.schemaAddType(name, { folder, description: 'Native investigation context', author: await this.author() });
     }
-    const fields = (await this.client.schemaListFields()).fields;
-    for (const definition of FIELDS) {
-      const existing = fields.find(entry => entry.key === definition.name);
-      if (existing === undefined) await this.client.schemaAddField(definition.name, { type: 'string', description: 'pm-hypothesis versioned native record', author: await this.author() });
-      else if (existing.type !== 'string') throw new HypothesisError('schema', 'Registered hypothesis field has an incompatible type', 'Register hypothesis_state and hypothesis_record as string fields');
+    for (const definition of FIELDS) if (!fields.some(entry => entry.key === definition.name)) await this.client.schemaAddField(definition.name, { type: 'string', description: 'pm-hypothesis versioned native record', author: await this.author() });
+  }
+  /** Read projected native fields with complete unbounded SDK output; source strings are never summaries. */
+  async get(id: string): Promise<GetResult['item']> {
+    const registered = this.policy?.fields ?? (await this.client.schemaListFields()).fields;
+    const fields = ['id', 'type', 'parent', 'status', 'closed_at', 'created_at', 'updated_at', 'body', ...FIELDS.filter(field => registered.some(actual => actual.key === field.name)).map(field => field.name)].join(',');
+    try {
+      // Explicit unbounded cost disables the SDK's budget-exceeded union member.
+      return (await this.client.get(id, { outputInclude: fields, outputLimit: 'unbounded', outputBudget: 'unbounded' }) as GetResult).item;
+    }
+    catch (error) {
+      if (error instanceof PmCliError && error.code === 'unknown_field_projection') throw new HypothesisError('conflict', 'Schema changed during the native source read', 'Read the current schema and retry');
+      if (error instanceof PmCliError && error.code === 'item_document_invalid') throw new HypothesisError('schema', 'Native SDK rejected an invalid item document', 'Repair the native schema or item through pm before using its data', { item: id });
+      throw error;
     }
   }
-  /** Read the complete domain fields and native source revision without a child-corpus walk. */
-  async get(id: string): Promise<GetResult['item']> { return (await this.client.get(id, { fields: 'id,type,parent,status,closed_at,created_at,updated_at,body,hypothesis_state,hypothesis_record' })).item; }
   /** Absence is an explicit precondition; unrelated SDK failures remain failures. */
   async optional(id: string): Promise<GetResult['item'] | undefined> {
     try { return await this.get(id); }
     catch (error) { if (error instanceof PmCliError && error.exitCode === EXIT_CODE.NOT_FOUND) return undefined; throw error; }
   }
+  /** Read one authoritative schema/status snapshot through the SDK. */
+  async schema(): Promise<AdmissionSchema> { return admissionSchema(this.client, this.options.workspace, this.options.backend === 'remote'); }
   /** Capture every dependency, including deleted sources, without interpreting saved plans. */
-  async sources(_investigation: string, value: Investigation): Promise<SourceSnapshot[]> { return Promise.all([...value.hypotheses, ...value.observations].map(async record => ({ id: record.id, item: await this.optional(record.id) }))); }
+  async sources(value: Investigation, schema: AdmissionSchema): Promise<SourceSnapshot[]> {
+    const captured = schema;
+    return Promise.all([...value.hypotheses, ...value.observations].map(async record => { const item = await this.optional(record.id); return { id: record.id, item, invalidStatus: item !== undefined && !usableSource(item, captured), invalidType: item !== undefined && !captured.types.some(type => type.name === item.type), invalidSchema: !captured.fields.some(field => field.key === 'hypothesis_record' && field.type === 'string') }; }));
+  }
   /** Plan a source using its first native read; never create during preparation. */
   async planRecord(id: string, type: string, title: string, encode: (current: GetResult['item'] | undefined) => string, parent?: string): Promise<RecordPlan> {
-    const current = await this.optional(id);
+    const schema = this.policy ?? await this.schema(); const current = await this.optional(id);
     if (current === undefined && (await readHistorySnapshot(getHistoryPath(this.options.workspace, id), id)).raw !== null) throw new HypothesisError('conflict', 'A native source was removed after it had been recorded', 'Restore it through pm after review, withdraw the fact, or use a new operation identity; retries never undo deletion');
     const record = encode(current);
     await this.boundary('record-read');
-    if (current !== undefined && (current.hypothesis_record !== record || current.parent !== parent || current.type !== type || current.closed_at !== undefined)) throw new HypothesisError('conflict', 'Native source does not match this intent', 'Inspect the native record and repair or choose a new operation identity');
+    if (current !== undefined && (current.parent !== parent || current.type !== type || !usableSource(current, schema) || !schema.fields.some(field => field.key === 'hypothesis_record' && field.type === 'string'))) throw new HypothesisError('conflict', 'Native source does not match this intent', 'Inspect the native record and repair or choose a new operation identity');
+    if (current !== undefined) sameDeclaration(current.hypothesis_record, record);
+    if (current === undefined && !usableStatus(schema.statuses.open_status, schema)) throw new HypothesisError('conflict', 'The native default creation status is terminal or withdrawn', 'Select an active default status through the native status registry');
     await this.boundary('plan-ready');
-    return { snapshot: { id, item: current, ...(current === undefined ? { historyAbsent: true as const } : {}) }, ...(current === undefined ? { create: { op: 'create' as const, id, unique: { key: 'hypothesis_record', value: record }, options: { type, title: inert(title), parent, hypothesisRecord: record, createMode: 'progressive' } } } : {}) };
+    return { snapshot: { id, item: current, ...(current === undefined ? { historyAbsent: true as const } : {}) }, ...(current === undefined ? { create: { op: 'create' as const, id, unique: { key: 'hypothesis_record', value: record }, options: { type, status: schema.statuses.open_status, title: inert(title), parent, hypothesisRecord: record, createMode: 'progressive' } } } : {}) };
   }
   /** Validate every captured version, including absence, through authoritative SDK reads. */
   async validate(snapshots: SourceSnapshot[]): Promise<void> {
@@ -120,23 +147,28 @@ export class Store {
   }
   /** Read current validity under one owner/source snapshot before deriving any decision. */
   async view(id: string) {
-    const owner = await this.get(id); requireInput(owner.type === 'Question' || owner.type === 'Issue', 'Investigation owner must be a Question or Issue');
-    const value = state(owner.hypothesis_state); const sources = await this.sources(owner.id, value);
+    const schema = this.policy = await this.schema(); const owner = await this.get(id); requireInput(owner.type === 'Question' || owner.type === 'Issue', 'Investigation owner must be a Question or Issue');
+    const value = state(owner.hypothesis_state); const sources = await this.sources(value, schema);
     await this.boundary('owner-read');
-    return this.withSources([{ id: owner.id, item: owner }, ...sources], async () => ({ id: owner.id, value, sources, issues: sourceIssues(owner.id, value, sources) }));
+    return this.withSources([{ id: owner.id, item: owner }, ...sources], async () => { sameSchema(schema, await this.schema()); return { id: owner.id, value, sources, issues: sourceIssues(owner.id, value, sources) }; });
   }
   /** One prevalidated SDK multi-item commit: the owner CAS is its first write. */
-  private async commit(snapshots: SourceSnapshot[], mutations: BulkItemMutation[]): Promise<void> {
-    const author = await this.author(); const transactionId = `hypothesis-owner-batch-${digest([snapshots, mutations, randomUUID()])}`;
-    const schema = await resolveTransactionSchema(this.options.workspace, await readSettings(this.options.workspace));
-    const input = { pmRoot: this.options.workspace, author, transactionId, mutations: parseItemMutationBatch(JSON.stringify(mutations), { runtimeFields: resolveRuntimeFieldRegistry(schema.schema).definitions }) };
-    await this.validate(snapshots);
+  private async commit(snapshots: SourceSnapshot[], mutations: BulkItemMutation[], schema: AdmissionSchema): Promise<void> {
+    const author = await this.author();
+    const intent = digest([mutations[0].id, this.intent ?? mutations.map(mutation => ({ ...mutation, ...('match' in mutation ? { match: undefined } : {}) }))]);
+    const precondition = digest([snapshots, schema.signature]);
+    const transactionId = `hypothesis-owner-batch-${digest([intent, precondition, randomUUID()])}`;
+    const input = { pmRoot: this.options.workspace, author, transactionId, mutations };
+    await this.validate(snapshots); sameSchema(schema, await this.schema());
+    const preview = await validateBatch(input);
+    const attempts = new Attempts(this.options.workspace, mutations[0].id);
+    await attempts.plan(author, { id: transactionId, intent, precondition, status: 'planned', constraints: [...preview.unresolved_commit_constraints] });
     // Created ids are guarded by the SDK's create/unique preconditions. Existing
     // sources stay leased; the owner must remain free for its native SDK CAS.
     const owner = mutations[0].id; const created = new Set(mutations.filter(mutation => mutation.op === 'create').map(mutation => mutation.id));
     let release = (): void => undefined; let retained: Promise<unknown> = Promise.resolve();
     try {
-      await this.validate(snapshots);
+      await this.validate(snapshots); sameSchema(schema, await this.schema());
       await commitItemMutations({ ...input, onTransition: async event => {
         if (event.transition === 'prepared') {
           // Acquire source leases after the SDK workspace writer. Every package
@@ -148,40 +180,49 @@ export class Store {
           });
         }
         await this.options.onTransition?.(event);
-        if (event.transition === 'prepared') await this.validate(snapshots);
+        if (event.transition === 'prepared') { await this.validate(snapshots); sameSchema(schema, await this.schema()); }
       }, lockWaitMs: 10000 });
     } finally { release(); await retained; }
+    await attempts.committed(author, transactionId);
   }
   /** Fix all preconditions once; fresh creates stay in memory until the one batch. */
   async mutate(id: string, change: (value: Investigation, sources: SourceSnapshot[]) => string | undefined, prepare?: (owner: GetResult['item'], value: Investigation) => Promise<RecordPlan[]>, initialize = false, capturedOwner?: GetResult['item']): Promise<{ id: string; value: Investigation }> {
-    this.writable(); const item = capturedOwner ?? await this.get(id);
-    requireInput(item.type === 'Question' || item.type === 'Issue', 'Investigation owner must be a Question or Issue');
-    const initial = initialize && item.hypothesis_state === undefined;
-    const value: Investigation = initial ? { version: 1, revision: 0, hypotheses: [], observations: [] } : state(item.hypothesis_state);
-    this.expected(value); const dependencies = await this.sources(item.id, value);
-    const plans = await prepare?.(item, value) ?? [];
-    const snapshots = [{ id: item.id, item }, ...dependencies, ...plans.map(plan => plan.snapshot)];
-    await this.boundary('owner-read');
-    await this.validate(snapshots);
-    const comment = initial ? 'Opened differential investigation' : change(value, dependencies);
-    const creates = plans.flatMap(plan => plan.create === undefined ? [] : [plan.create]);
-    await this.boundary('admission-ready');
     try {
-      if (comment !== undefined || creates.length > 0) {
-        if (!initial && comment !== undefined) value.revision++;
-        const mutation: BulkItemMutation = { op: 'update', id: item.id, match: { key: 'updated_at', value: item.updated_at }, options: { hypothesisState: JSON.stringify(value), comment: [comment ?? 'Restored missing native investigation sources'] } };
-        await this.commit(snapshots, [mutation, ...creates]);
-        await this.boundary('owner-written'); if (plans.length > 0) await this.boundary('record-written');
-      } else await this.withSources(snapshots, async () => undefined);
+      this.writable(); const schema = this.policy = await this.schema(); const item = capturedOwner ?? await this.get(id); id = item.id;
+      requireInput(item.type === 'Question' || item.type === 'Issue', 'Investigation owner must be a Question or Issue');
+      const initial = initialize && item.hypothesis_state === undefined;
+      const value: Investigation = initial ? { version: 1, revision: 0, hypotheses: [], observations: [] } : state(item.hypothesis_state);
+      this.expected(value); const dependencies = await this.sources(value, schema);
+      const plans = await prepare?.(item, value) ?? [];
+      const snapshots = [{ id: item.id, item }, ...dependencies, ...plans.map(plan => plan.snapshot)];
+      await this.boundary('owner-read');
+      await this.validate(snapshots); sameSchema(schema, await this.schema());
+      const comment = initial ? 'Opened differential investigation' : change(value, dependencies);
+      const creates = plans.flatMap(plan => plan.create === undefined ? [] : [plan.create]);
+      await this.boundary('admission-ready');
+      try {
+        if (comment !== undefined || creates.length > 0) {
+          if (!initial && comment !== undefined) value.revision++;
+          const mutation: BulkItemMutation = { op: 'update', id: item.id, match: { key: 'updated_at', value: item.updated_at }, options: { hypothesisState: JSON.stringify(value), comment: [comment ?? 'Restored missing native investigation sources'] } };
+          await this.commit(snapshots, [mutation, ...creates], schema);
+          await this.boundary('owner-written'); if (plans.length > 0) await this.boundary('record-written');
+        } else await this.withSources(snapshots, async () => { sameSchema(schema, await this.schema()); if (this.intent !== undefined) await new Attempts(this.options.workspace, item.id).satisfied(await this.author(), digest([item.id, this.intent])); });
+      } catch (error) {
+        if (error instanceof PmCliError && error.exitCode === EXIT_CODE.CONFLICT || /upsert_match_changed|no longer carries upsert key|already exists|upsert_key_conflict/.test(String(error))) throw new HypothesisError('conflict', 'A conditional batch precondition changed', 'Read the current investigation and retry with the same intent');
+        throw error;
+      }
+      await this.boundary('complete'); return { id: item.id, value };
     } catch (error) {
-      if (error instanceof PmCliError && error.exitCode === EXIT_CODE.CONFLICT || /upsert_match_changed|no longer carries upsert key|already exists|upsert_key_conflict/.test(String(error))) throw new HypothesisError('conflict', 'A conditional batch precondition changed', 'Read the current investigation and retry with the same intent');
+      if (error instanceof HypothesisError && ['missing', 'invalid', 'schema'].includes(error.code) && this.intent !== undefined) {
+        const intent = digest([id, this.intent]); const pending = (await new Attempts(this.options.workspace, id).read()).some(attempt => attempt.intent === intent && attempt.status === 'planned');
+        if (pending) throw new HypothesisError('conflict', 'The current target no longer supports the interrupted intent', 'Inspect the current owner and sources; repair the conflicting edit or choose a different intent');
+      }
       throw error;
     }
-    await this.boundary('complete'); return { id: item.id, value };
   }
   /** Create the investigation and its initial envelope in one native SDK creation. */
   async initialize(id: string, title: string, create: boolean): Promise<{ id: string }> {
-    this.writable(); const item = await this.optional(id);
+    this.writable(); const schema = this.policy = await this.schema(); const item = await this.optional(id);
     if (item !== undefined) {
       if (create && item.hypothesis_record !== JSON.stringify({ kind: 'investigation', id, title })) throw new HypothesisError('conflict', 'Investigation source does not match this intent', 'Inspect the native investigation or use a new operation identity');
       return this.mutate(item.id, () => undefined, undefined, true, item);
@@ -190,8 +231,9 @@ export class Store {
     if ((await readHistorySnapshot(getHistoryPath(this.options.workspace, id), id)).raw !== null) throw new HypothesisError('conflict', 'The investigation identity was deleted', 'Restore the native investigation through pm or use a new operation identity');
     this.expected({ version: 1, revision: 0, hypotheses: [], observations: [] });
     await this.boundary('record-read'); await this.boundary('plan-ready'); await this.boundary('owner-read'); await this.boundary('admission-ready');
+    if (!usableStatus(schema.statuses.open_status, schema)) throw new HypothesisError('conflict', 'The native default creation status is not admissible', 'Select an active default status through the native registry');
     const record = JSON.stringify({ kind: 'investigation', id, title });
-    await this.commit([{ id, item, historyAbsent: true }], [{ op: 'create', id, unique: { key: 'hypothesis_record', value: record }, options: { type: 'Question', title: inert(title), hypothesisRecord: record, hypothesisState: JSON.stringify({ version: 1, revision: 0, hypotheses: [], observations: [] }), comment: ['Opened differential investigation'], createMode: 'progressive' } }]);
+    await this.commit([{ id, item, historyAbsent: true }], [{ op: 'create', id, unique: { key: 'hypothesis_record', value: record }, options: { type: 'Question', status: schema.statuses.open_status, title: inert(title), hypothesisRecord: record, hypothesisState: JSON.stringify({ version: 1, revision: 0, hypotheses: [], observations: [] }), comment: ['Opened differential investigation'], createMode: 'progressive' } }], schema);
     await this.boundary('owner-written'); await this.boundary('record-written'); await this.boundary('complete'); return { id };
   }
 }

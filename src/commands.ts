@@ -30,7 +30,7 @@ export async function runCommand(command: string, ctx: CommandHandlerContext): P
     throw new HypothesisError('invalid', 'Unknown hypothesis command', 'Read pm hypothesis --help');
   } catch (error) {
     const refusal = error instanceof HypothesisError ? error : new HypothesisError('sdk', 'Investigation SDK operation failed', 'Check pm health, tracker access and schema; retry the same operation');
-    throw createPmCliExpectedError(`hypothesis ${refusal.code}: ${refusal.message}. Remedy: ${refusal.remedy}`, { exitCode: refusal.code === 'conflict' ? 3 : 2 });
+    throw createPmCliExpectedError(`hypothesis ${refusal.code}: ${refusal.message}. Remedy: ${refusal.remedy}`, { exitCode: ['conflict', 'declaration_mismatch'].includes(refusal.code) ? 3 : 2, context: { code: refusal.code, ...refusal.details } });
   }
 }
 /** Register documented host commands and package-owned scalar fields. */

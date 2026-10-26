@@ -2,13 +2,13 @@ import { getActiveExtensionRegistrations, readSettings } from '@unbrained/pm-cli
 import { data, digest, HypothesisError, operand, packet, requireInput, safe } from './core.ts';
 import { choose, decisionValid, derive } from './derive.ts';
 import { Store } from './store.ts';
-import { hypothesisPayload, observationPayload, payload, sourceIssues, usedIssues } from './records.ts';
+import { canonicalPredictions, hypothesisPayload, observationPayload, payload, sameDeclaration, sourceIssues, usedIssues } from './records.ts';
 import type { Conclusion, Investigation, ObserveOptions, Observation, Options, Prediction, ResumeRow } from './types.ts';
 
 /** Open or attach a revisioned investigation, with deterministic replay identity. */
 export async function open(title: string, options: Options & { item?: string }) {
   options = { ...options };
-  data(title); const store = new Store(options); await store.register();
+  data(title); const store = new Store(options, ['open', options.item === undefined ? title : 'attachment', options.operationId]); await store.register();
   const prefix = (await readSettings(options.workspace)).id_prefix;
   requireInput(typeof prefix === 'string', 'Tracker prefix is missing');
   const id = options.item ?? `${prefix.replace(/-$/, '')}-inv-${digest([title, options.operationId])}`;
@@ -19,13 +19,15 @@ export async function open(title: string, options: Options & { item?: string }) 
 export async function add(investigation: string, statement: string, predictions: Prediction[], options: Options) {
   options = { ...options };
   data(statement); requireInput(predictions.length > 0 && predictions.length <= 1000, 'Supply 1 to 1000 predictions');
-  predictions = predictions.map(prediction => ({ observation: data(prediction.observation), value: data(prediction.value) })).sort((a, b) => a.observation.localeCompare(b.observation, 'en'));
+  predictions = canonicalPredictions(predictions.map(prediction => ({ observation: data(prediction.observation), value: data(prediction.value) })));
   requireInput(new Set(predictions.map(entry => entry.observation)).size === predictions.length, 'Each observation key needs one prediction per hypothesis');
-  const store = new Store(options); let id = '';
+  const store = new Store(options, ['add', statement, predictions, options.operationId]); let id = '';
   const result = await store.mutate(investigation, current => {
-    if (current.hypotheses.some(entry => entry.id === id)) return undefined;
+    const original = current.hypotheses.find(entry => entry.id === id);
+    if (original !== undefined) { sameDeclaration(hypothesisPayload(investigation, original), hypothesisPayload(investigation, { id, statement, predictions })); return undefined; }
     current.hypotheses.push({ id, statement, predictions }); return `Added hypothesis ${id}`;
   }, async owner => {
+    investigation = owner.id;
     id = `${owner.id}-h-${digest([statement, predictions, options.operationId])}`;
     return [await store.planRecord(id, 'Question', statement, () => hypothesisPayload(owner.id, { id, statement, predictions }), owner.id)];
   });
@@ -39,7 +41,7 @@ export function evidenceStatus(citation?: string): Observation['evidenceStatus']
 /** Admit/dispute a fact or withdraw an existing fact; all elimination is derived. */
 export async function observe(investigation: string, observation: string, value: string, options: ObserveOptions) {
   options = { ...options };
-  const store = new Store(options);
+  const store = new Store(options, ['observe', observation, value, options.author, options.withdraw, options.how, options.when, options.status, options.evidence, options.operationId]);
   if (options.withdraw !== undefined) {
     const id = data(options.withdraw);
     const result = await store.mutate(investigation, current => {
@@ -65,7 +67,7 @@ export async function observe(investigation: string, observation: string, value:
       const stored = payload(native?.hypothesis_record);
       const when = options.when ?? original?.when ?? (typeof stored?.when === 'string' ? stored.when : native?.created_at) ?? new Date().toISOString();
       fact = { id, observation, value, status, who, when, how, evidence: options.evidence, evidenceStatus: citationStatus };
-      if (original !== undefined && (original.observation !== observation || original.value !== value || original.who !== who || original.how !== how || original.when !== when || original.evidence !== options.evidence)) throw new HypothesisError('conflict', 'The stored admission differs from this intent', 'Inspect the original fact before repairing or recording a new occurrence');
+      if (original !== undefined) sameDeclaration([original.observation, original.value, original.who, original.how, original.when, original.evidence, original.status === 'withdrawn' ? status : original.status], [observation, value, who, how, when, options.evidence, status]);
       if (native !== undefined) {
         const check: Investigation = { version: 1, revision: 0, hypotheses: [], observations: [fact] };
         if (sourceIssues(owner.id, check, [{ id, item: native }]).length > 0) throw new HypothesisError('conflict', 'Observation source invariants no longer hold', 'Repair the native Test or record a new operation identity');
@@ -111,7 +113,7 @@ export async function show(investigation: string, options: Options) {
 /** Record an explicit conclusion only after every unresolved alternative is acknowledged. */
 export async function conclude(investigation: string, cause: string, reason: string, options: Options & { acceptViable?: string[] }) {
   options = { ...options };
-  data(cause); data(reason); const accepted = [...new Set(options.acceptViable ?? [])].sort(); const store = new Store(options);
+  data(cause); data(reason); const accepted = [...new Set(options.acceptViable ?? [])].sort(); const store = new Store(options, ['conclude', cause, reason, accepted, options.operationId]);
   const result = await store.mutate(investigation, (current, sources) => {
     if (usedIssues(current, sourceIssues(investigation, current, sources)).length > 0) throw new HypothesisError('conflict', 'Current source invariants do not support a conclusion', 'Read hypothesis show and repair or withdraw invalid sources before concluding');
     const rows = derive(current); const selected = rows.find(entry => entry.id === cause);
