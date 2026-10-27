@@ -2,14 +2,48 @@ id: pm-hypothesis-matrix
 title: Matrix investigation context
 description: ""
 type: Feature
-status: in_progress
+status: closed
 priority: 2
 tags: []
 created_at: "2026-10-25T08:12:48.051Z"
-updated_at: "2026-10-25T08:12:51.893Z"
-assignee: codex-agent
-claim_principal: codex-agent
+updated_at: "2026-10-27T09:37:10.326Z"
+closed_at: "2026-10-27T09:37:08.821Z"
+completed_at: "2026-10-26T17:10:27.000Z"
 author: codex-agent
 acceptance_criteria: Exact admitted-contradiction witnesses; missing data never eliminates; withdrawal restores only affected explanations; randomized equivalence proof.
 parent: pm-hypothesis-build
+resolution: Merged PR #1 at bdd93506b7dc3f1e4d93ca27af01bc60c375c25e; inspected src/derive.ts and ran NPM_CONFIG_USERCONFIG=/dev/null node --test --test-concurrency=2 test/hypothesis.test.ts test/property.test.ts on main. Exact admitted contradictions and withdrawal witnesses; missing observations remain unknown; 100 seeded SDK equivalence cases.
+expected_result: Exact admitted-contradiction witnesses; missing data never eliminates; withdrawal restores only affected explanations; randomized equivalence proof.
+actual_result: Exact admitted contradictions and withdrawal witnesses; missing observations remain unknown; 100 seeded SDK equivalence cases.
+comments[3]{created_at,author,text}:
+  "2026-10-25T08:18:48.612Z",codex-agent,"Acceptance fixture passes: no missing-data elimination, admitted-only contradiction witnesses, independent observation effects and exact withdrawal restoration. Conflicting admitted facts retain all witnesses; no confidence score is used."
+  "2026-10-27T09:34:35.530Z",codex-agent,"Closure audit: verify every acceptance criterion on current main against merged PR #1 (bdd93506b7dc3f1e4d93ca27af01bc60c375c25e), inspect src/derive.ts, and run the focused linked check before closing. Completion will be the merge timestamp 2026-10-26T17:10:27Z."
+  "2026-10-27T09:37:07.101Z",codex-agent,Merged PR #1 at bdd93506b7dc3f1e4d93ca27af01bc60c375c25e; inspected src/derive.ts and ran NPM_CONFIG_USERCONFIG=/dev/null node --test --test-concurrency=2 test/hypothesis.test.ts test/property.test.ts on main. Exact admitted contradictions and withdrawal witnesses; missing observations remain unknown; 100 seeded SDK equivalence cases. Full unchanged npm and Bun release gates run in CI for this tracker-only closure PR; prior behavioral revert evidence remains in the merged implementation history.
+files[3]{path,scope}:
+  src/derive.ts,project
+  test/hypothesis.test.ts,project
+  test/property.test.ts,project
+tests[2]:
+  - command: "node --test --test-name-pattern=\"^acceptance:\" test/hypothesis.test.ts"
+    scope: project
+    provenance:
+      author: codex-agent
+      created_at: "2026-10-25T08:32:51.768Z"
+      source_kind: local_mutation
+      source_ref: feat/hypothesis
+  - command: NPM_CONFIG_USERCONFIG=/dev/null node --test --test-concurrency=2 test/hypothesis.test.ts test/property.test.ts
+    scope: project
+    timeout_seconds: 600
+    pm_context_mode: tracker
+    workspace_context_mode: source
+    provenance:
+      author: codex-agent
+      created_at: "2026-10-27T09:34:40.243Z"
+      source_kind: local_mutation
+      source_ref: chore/close-delivered-1027
+docs[3]{path,scope}:
+  ARCHITECTURE.md,project
+  docs/real-data.md,project
+  README.md,project
+close_reason: Delivered on main by merged PR #1
 body: ""

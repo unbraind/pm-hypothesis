@@ -247,7 +247,7 @@ test("entry-point guard answers identity, absence and difference", () => {
   assert.equal(isMainInvocation(["node"], moduleUrl), false);
   assert.equal(isMainInvocation(["node", join(repositoryRoot, "package.json")], moduleUrl), false);
   assert.equal(isMainInvocation(["node", modulePath], moduleUrl), true);
-  assert.throws(() => isMainInvocation(["node", "/no/such/entry-script"], moduleUrl));
+  assert.throws(() => isMainInvocation(["node", join(scratchBase, "absent-entry-script")], moduleUrl));
 });
 
 test("docstring gate fails an undocumented tree and names the declaration", () => {
@@ -492,7 +492,7 @@ test("coverage gate reports a runner that cannot start", () => {
     "package.json": coverageManifest(FULL_THRESHOLDS),
     "src/covered.ts": COVERED_SOURCE,
   });
-  const outcome = capturedGate(root, { executable: "/no/such/reporter-launcher", script: "c8.js" });
+  const outcome = capturedGate(root, { executable: join(root, "absent-reporter-launcher"), script: "c8.js" });
   assert.equal(outcome.status, 1);
   assert.match(outcome.seen, /failed to start the c8 reporter/);
 });

@@ -4,10 +4,11 @@
   "description": "Competing explanations, predictions and observation witnesses as durable investigation context",
   "author": "@unbraind",
   "entry": "./dist/index.js",
-  "pm_min_version": "2026.10.24",
+  "pm_min_version": "2026.10.26",
   "priority": 90,
   "capabilities": [
     "commands",
-    "schema"
+    "schema",
+    "renderers"
   ]
 }

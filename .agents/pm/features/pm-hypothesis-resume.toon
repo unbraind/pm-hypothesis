@@ -2,14 +2,60 @@ id: pm-hypothesis-resume
 title: Resume investigation context
 description: ""
 type: Feature
-status: in_progress
+status: closed
 priority: 2
 tags: []
 created_at: "2026-10-25T08:13:00.860Z"
-updated_at: "2026-10-25T08:13:05.627Z"
-assignee: codex-agent
-claim_principal: codex-agent
+updated_at: "2026-10-27T09:34:31.187Z"
+closed_at: "2026-10-27T09:34:29.249Z"
+completed_at: "2026-10-26T17:10:27.000Z"
 author: codex-agent
 acceptance_criteria: "Viable and unknown hypotheses, witnesses, open predictions and next request within the requested token budget including omission receipt."
 parent: pm-hypothesis-build
+resolution: "Merged PR #1 at bdd93506b7dc3f1e4d93ca27af01bc60c375c25e; inspected src/derive.ts and ran NPM_CONFIG_USERCONFIG=/dev/null node --test --test-concurrency=2 test/hypothesis.test.ts test/restoration.test.ts on main. Bounded resume preserves viable/unknown hypotheses, witnesses, pending requests and omission receipts."
+expected_result: "Viable and unknown hypotheses, witnesses, open predictions and next request within the requested token budget including omission receipt."
+actual_result: "Bounded resume preserves viable/unknown hypotheses, witnesses, pending requests and omission receipts."
+comments[5]{created_at,author,text}:
+  "2026-10-25T08:34:02.812Z",codex-agent,"Public incident proof: five hypotheses, ten observations, matrix after each fact. Resume 1394 estimated tokens, 11 returned rows and 5 omitted; every eliminated explanation has a witness. Full native transcript 35824 bytes / 8956 estimated tokens. One public GitHub read and 56 in-process API calls. Scratch tracker removed."
+  "2026-10-25T08:38:16.949Z",codex-agent,"Updated public corpus measurement after adding explicit native source identity and owner scope: 37913 UTF-8 bytes / 9479 estimated tokens; resume remains 1394 tokens with 11 rows and 5 explicit omissions. All four eliminated explanations have a returned witness. Public read count remains 1 and in-process API calls 56."
+  "2026-10-25T14:40:01.859Z",codex-agent,"PR #1 recovery class: matrix and resume receipts name the concrete show command for their investigation. Show restores all rows, observations and conclusions without a packet budget; the native CLI test recovered an omitted roughly 8000-character conclusion. Reverting the resume receipt to matrix makes the restoration regression fail. No GitHub thread replies or mentions were made."
+  "2026-10-27T09:33:16.009Z",codex-agent,"Closure audit: verify every acceptance criterion on current main against merged PR #1 (bdd93506b7dc3f1e4d93ca27af01bc60c375c25e), inspect src/derive.ts, and run the focused linked check before closing. Completion will be the merge timestamp 2026-10-26T17:10:27Z."
+  "2026-10-27T09:34:27.658Z",codex-agent,"Merged PR #1 at bdd93506b7dc3f1e4d93ca27af01bc60c375c25e; inspected src/derive.ts and ran NPM_CONFIG_USERCONFIG=/dev/null node --test --test-concurrency=2 test/hypothesis.test.ts test/restoration.test.ts on main. Bounded resume preserves viable/unknown hypotheses, witnesses, pending requests and omission receipts. Full unchanged npm and Bun release gates run in CI for this tracker-only closure PR; prior behavioral revert evidence remains in the merged implementation history."
+files[5]{path,scope}:
+  src/core.ts,project
+  src/derive.ts,project
+  src/hypothesis.ts,project
+  test/hypothesis.test.ts,project
+  test/restoration.test.ts,project
+tests[3]:
+  - command: "node --test --test-name-pattern=\"admission, repeated\" test/hypothesis.test.ts"
+    scope: project
+    provenance:
+      author: codex-agent
+      created_at: "2026-10-25T08:33:10.268Z"
+      source_kind: local_mutation
+      source_ref: feat/hypothesis
+  - command: "node --test --test-name-pattern=\"every advertised\" test/restoration.test.ts"
+    scope: project
+    timeout_seconds: 180
+    provenance:
+      author: codex-agent
+      created_at: "2026-10-25T14:47:27.438Z"
+      source_kind: local_mutation
+      source_ref: feat/hypothesis
+  - command: NPM_CONFIG_USERCONFIG=/dev/null node --test --test-concurrency=2 test/hypothesis.test.ts test/restoration.test.ts
+    scope: project
+    timeout_seconds: 600
+    pm_context_mode: tracker
+    workspace_context_mode: source
+    provenance:
+      author: codex-agent
+      created_at: "2026-10-27T09:33:21.316Z"
+      source_kind: local_mutation
+      source_ref: chore/close-delivered-1027
+docs[3]{path,scope}:
+  ARCHITECTURE.md,project
+  docs/real-data.md,project
+  README.md,project
+close_reason: Delivered on main by merged PR #1
 body: ""

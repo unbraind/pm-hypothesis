@@ -1,0 +1,25 @@
+id: pm-hypothesis-backend
+title: Certify remote mutation when the host exposes conditional item capabilities
+description: ""
+type: Task
+status: open
+priority: 2
+tags[3]: "gh:unbraind/pm-cli#1399",sdk-gap,"upstream:pm-cli#1399"
+created_at: "2026-10-25T08:38:14.938Z"
+updated_at: "2026-10-27T09:53:45.147Z"
+author: codex-agent
+acceptance_criteria: "Consume a host-owned conditional item mutation service, revalidate revisions on recovery, and run real backend conformance without filesystem fallbacks before enabling remote writes."
+parent: pm-hypothesis-build
+blocked_reason: The pinned SDK conditional item transaction API requires a filesystem tracker root
+comments[3]{created_at,author,text}:
+  "2026-10-25T08:40:20.975Z",codex-agent,The local capability-refusal regression is green. This item remains blocked until the SDK supplies an authoritative backend-owned conditional mutation service; hosted Postgres/MCP mutation acceptance is deliberately unclaimed. This package does not contact hosted services.
+  "2026-10-27T09:14:23.319Z",codex-agent,"Closure audit checked installed SDK 2026.10.26 public declarations: commitItemMutations(options: CommitItemMutationsOptions) requires pmRoot:string and exposes mutations/transactionId/author, with no injected backend client or backend-owned conditional mutation capability. commitWorkspaceTransaction likewise requires pmRoot:string. Local transactions exist and are used; missing remote transport conformance is tracked upstream by open unbraind/pm-cli#1399. No hosted services were accessed."
+  "2026-10-27T09:53:39.061Z",codex-agent,PR #1 delivers the local non-git package. Remote mutation enablement still requires host-owned conditional capabilities and real backend conformance; this task stays open. Reviewed merged PR #1 (bdd93506b7dc3f1e4d93ca27af01bc60c375c25e).
+files[3]{path,scope}:
+  src/store.ts,project
+  src/types.ts,project
+  test/edges.test.ts,project
+docs[2]{path,scope}:
+  ARCHITECTURE.md,project
+  README.md,project
+body: ""
