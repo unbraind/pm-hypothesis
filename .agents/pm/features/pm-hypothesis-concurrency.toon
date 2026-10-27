@@ -7,7 +7,7 @@ status: closed
 priority: 2
 tags[1]: "gh:unbraind/pm-hypothesis#6"
 created_at: "2026-10-25T08:13:07.271Z"
-updated_at: "2026-10-27T09:32:02.517Z"
+updated_at: "2026-10-27T09:57:28.847Z"
 closed_at: "2026-10-27T09:32:00.544Z"
 completed_at: "2026-10-26T17:10:27.000Z"
 author: codex-agent
@@ -16,7 +16,7 @@ parent: pm-hypothesis-build
 resolution: "Merged PR #1 at bdd93506b7dc3f1e4d93ca27af01bc60c375c25e; inspected src/store.ts and ran NPM_CONFIG_USERCONFIG=/dev/null node --test --test-concurrency=2 test/concurrency.test.ts on main. Revision guards cover observations, withdrawals and conclusions; boundary interleavings and crashes converge without duplicates."
 expected_result: "Every write revalidates current expected revision; retry and crash convergence without duplicates; interleavings at every observation, withdrawal and conclusion boundary."
 actual_result: "Revision guards cover observations, withdrawals and conclusions; boundary interleavings and crashes converge without duplicates."
-comments[23]{created_at,author,text}:
+comments[24]{created_at,author,text}:
   "2026-10-25T08:18:53.546Z",codex-agent,Each journal contains one target. Current owner field is its expected revision; retry recomputes from a fresh read. Immutable source records are revalidated before dependent owner work. Exhaustive package and SDK transition crash/interleaving cases are running.
   "2026-10-25T08:34:49.796Z",codex-agent,Exhaustive initial boundary suite passed 64/64 plus seeded 100-set property test. Added native edit cases prove source revalidation and actual SDK CAS refusal/retry between the final owner read and commit. No frozen multi-target plan is replayed; single-target journal dependencies stop on conflict.
   "2026-10-25T14:39:59.215Z",codex-agent,"PR #1 source-admission class: captured hypothesis and observation source revisions are now held with SDK native item leases and fenced through the owner field CAS. Source changes at pre-admission boundaries refuse with conflict and leave matrix/revision unchanged; post-admission edits serialize later. Revert proof: bypassing fenced revision validation makes the record-written edit regression fail with missing expected rejection. All 9 behavioral revert proofs passed and restored source bytes exactly."
@@ -40,6 +40,7 @@ comments[23]{created_at,author,text}:
   "2026-10-27T09:23:22.119Z",codex-agent,"The combined local audit exceeded its 600-second deadline while also running the additional 1312-case CAS matrix, so that attempt is not a complete pass. Run the focused concurrency file separately: it directly covers every observe/withdraw/conclude interleaving and crash boundary required by this item. The unchanged full CAS matrix remains part of the complete release gate in CI. No source, assertion, coverage or product timeout is changed."
   "2026-10-27T09:23:42.333Z",codex-agent,"Closure audit: verify every acceptance criterion on current main against merged PR #1 (bdd93506b7dc3f1e4d93ca27af01bc60c375c25e), inspect src/store.ts, and run the focused linked check before closing. Completion will be the merge timestamp 2026-10-26T17:10:27Z."
   "2026-10-27T09:31:58.722Z",codex-agent,"Merged PR #1 at bdd93506b7dc3f1e4d93ca27af01bc60c375c25e; inspected src/store.ts and ran NPM_CONFIG_USERCONFIG=/dev/null node --test --test-concurrency=2 test/concurrency.test.ts on main. Revision guards cover observations, withdrawals and conclusions; boundary interleavings and crashes converge without duplicates. Full unchanged npm and Bun release gates run in CI for this tracker-only closure PR; prior behavioral revert evidence remains in the merged implementation history."
+  "2026-10-27T09:57:28.806Z",codex-agent,"Bounded CI watch: required checks at b6be9a705dfefcc1940821bca8bf9252b63ed5c6 remain pending after approximately 3 minutes: test (22), test (26). Runs: https://github.com/unbraind/pm-hypothesis/actions/runs/40484329847. No red check was reported; runner scheduling has not completed these jobs. This append-only receipt changes tracker evidence only. The final receipt commit will have its own CI; no full release-gate pass is claimed for a pending head, and the orchestrator pipeline must wait before merging."
 files[14]{path,scope}:
   src/admission.ts,project
   src/attempts.ts,project
