@@ -3,15 +3,20 @@ title: Concurrency investigation context
 description: ""
 type: Feature
 pm_format_version: 2
-status: in_progress
+status: closed
 priority: 2
 tags[1]: "gh:unbraind/pm-hypothesis#6"
 created_at: "2026-10-25T08:13:07.271Z"
-updated_at: "2026-10-26T12:23:13.319Z"
+updated_at: "2026-10-27T09:32:02.517Z"
+closed_at: "2026-10-27T09:32:00.544Z"
+completed_at: "2026-10-26T17:10:27.000Z"
 author: codex-agent
 acceptance_criteria: "Every write revalidates current expected revision; retry and crash convergence without duplicates; interleavings at every observation, withdrawal and conclusion boundary."
 parent: pm-hypothesis-build
-comments[19]{created_at,author,text}:
+resolution: "Merged PR #1 at bdd93506b7dc3f1e4d93ca27af01bc60c375c25e; inspected src/store.ts and ran NPM_CONFIG_USERCONFIG=/dev/null node --test --test-concurrency=2 test/concurrency.test.ts on main. Revision guards cover observations, withdrawals and conclusions; boundary interleavings and crashes converge without duplicates."
+expected_result: "Every write revalidates current expected revision; retry and crash convergence without duplicates; interleavings at every observation, withdrawal and conclusion boundary."
+actual_result: "Revision guards cover observations, withdrawals and conclusions; boundary interleavings and crashes converge without duplicates."
+comments[23]{created_at,author,text}:
   "2026-10-25T08:18:53.546Z",codex-agent,Each journal contains one target. Current owner field is its expected revision; retry recomputes from a fresh read. Immutable source records are revalidated before dependent owner work. Exhaustive package and SDK transition crash/interleaving cases are running.
   "2026-10-25T08:34:49.796Z",codex-agent,Exhaustive initial boundary suite passed 64/64 plus seeded 100-set property test. Added native edit cases prove source revalidation and actual SDK CAS refusal/retry between the final owner read and commit. No frozen multi-target plan is replayed; single-target journal dependencies stop on conflict.
   "2026-10-25T14:39:59.215Z",codex-agent,"PR #1 source-admission class: captured hypothesis and observation source revisions are now held with SDK native item leases and fenced through the owner field CAS. Source changes at pre-admission boundaries refuse with conflict and leave matrix/revision unchanged; post-admission edits serialize later. Revert proof: bypassing fenced revision validation makes the record-written edit regression fail with missing expected rejection. All 9 behavioral revert proofs passed and restored source bytes exactly."
@@ -31,6 +36,10 @@ comments[19]{created_at,author,text}:
   "2026-10-26T11:41:59.096Z",codex-agent,"Recovery uses current SDK records and fresh transaction identities containing canonical intent, all captured owner/source versions, schema signature and invocation entropy. A changed precondition cannot collide with an old journal plan; package-owned runtime lineage supersedes prior validated attempts, and verified native no-ops mark pending intents satisfied. SDK journals are never read, abandoned or rewritten. Public journal lifecycle APIs remain unavailable (unbraind/pm-cli#1597). The 68 native journal-boundary and unrelated/conflicting edit cases pass."
   "2026-10-26T11:46:54.834Z",codex-agent,"Revert proof, recovery class (issue 6): replacing the revision-bound transaction id with an intent-only id makes the interrupted first-attachment retry fail assert.doesNotReject after an unrelated owner edit. Separately removing superseded-attempt bookkeeping fails the lineage status assertion. Both proofs alter implementation only in a disposable copy and restore exact bytes; the live implementation preserves the peer title, initializes once, and subsequent identical calls write nothing. No SDK journal files are read or changed; see unbraind/pm-cli#1597."
   "2026-10-26T12:22:55.017Z",codex-agent,"Extended model seeds 20261026, 1597 and 5006 pass: 195 state checks, 48 byte-identical refusals, nine SDK/JSON/TOON round trips, and existing conclusion validity checked against the independent model. The native recovery matrix passes all 68 journal-boundary/edit combinations (69 reported tests). Older atomic/source command rerun passes with its 600-second timeout. The expanded 82-case transport command exceeded its local 600-second linked-test timeout without an assertion result; it is not counted as green. The complete final-source property, interleaving and coverage suites will be verified by the PR release gate. The superseded long local coverage process was stopped after implementation changes; no local full-coverage claim is made."
+  "2026-10-27T09:12:06.218Z",codex-agent,"Closure audit: verify every acceptance criterion on current main against merged PR #1 (bdd93506b7dc3f1e4d93ca27af01bc60c375c25e), inspect src/store.ts, and run the focused linked check before closing. Completion will be the merge timestamp 2026-10-26T17:10:27Z."
+  "2026-10-27T09:23:22.119Z",codex-agent,"The combined local audit exceeded its 600-second deadline while also running the additional 1312-case CAS matrix, so that attempt is not a complete pass. Run the focused concurrency file separately: it directly covers every observe/withdraw/conclude interleaving and crash boundary required by this item. The unchanged full CAS matrix remains part of the complete release gate in CI. No source, assertion, coverage or product timeout is changed."
+  "2026-10-27T09:23:42.333Z",codex-agent,"Closure audit: verify every acceptance criterion on current main against merged PR #1 (bdd93506b7dc3f1e4d93ca27af01bc60c375c25e), inspect src/store.ts, and run the focused linked check before closing. Completion will be the merge timestamp 2026-10-26T17:10:27Z."
+  "2026-10-27T09:31:58.722Z",codex-agent,"Merged PR #1 at bdd93506b7dc3f1e4d93ca27af01bc60c375c25e; inspected src/store.ts and ran NPM_CONFIG_USERCONFIG=/dev/null node --test --test-concurrency=2 test/concurrency.test.ts on main. Revision guards cover observations, withdrawals and conclusions; boundary interleavings and crashes converge without duplicates. Full unchanged npm and Bun release gates run in CI for this tracker-only closure PR; prior behavioral revert evidence remains in the merged implementation history."
 files[14]{path,scope}:
   src/admission.ts,project
   src/attempts.ts,project
@@ -46,7 +55,7 @@ files[14]{path,scope}:
   test/review-classes.test.ts,project
   test/roundtrip.test.ts,project
   test/source-model.test.ts,project
-tests[11]:
+tests[13]:
   - command: "node --test --test-name-pattern=\"conditional conclusion rechecks\" test/concurrency.test.ts"
     scope: project
     provenance:
@@ -132,8 +141,29 @@ tests[11]:
       source_ref: feat/hypothesis
     updated_by: codex-agent
     updated_at: "2026-10-26T12:22:59.264Z"
+  - command: NPM_CONFIG_USERCONFIG=/dev/null node --test --test-concurrency=2 test/concurrency.test.ts test/cas-invocation.test.ts
+    scope: project
+    timeout_seconds: 600
+    pm_context_mode: tracker
+    workspace_context_mode: source
+    provenance:
+      author: codex-agent
+      created_at: "2026-10-27T09:12:11.341Z"
+      source_kind: local_mutation
+      source_ref: chore/close-delivered-1027
+  - command: NPM_CONFIG_USERCONFIG=/dev/null node --test --test-concurrency=2 test/concurrency.test.ts
+    scope: project
+    timeout_seconds: 600
+    pm_context_mode: tracker
+    workspace_context_mode: source
+    provenance:
+      author: codex-agent
+      created_at: "2026-10-27T09:23:46.650Z"
+      source_kind: local_mutation
+      source_ref: chore/close-delivered-1027
 docs[3]{path,scope}:
   ARCHITECTURE.md,project
   docs/real-data.md,project
   README.md,project
+close_reason: Delivered on main by merged PR #1
 body: ""
