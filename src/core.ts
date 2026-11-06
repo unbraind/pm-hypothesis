@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { WorkspaceTransactionInterruptedError } from '@unbrained/pm-cli/sdk';
+import { estimatePmOutputTokens, fitOutputEnvelope, OutputEnvelopeFitError, WorkspaceTransactionInterruptedError } from '@unbrained/pm-cli/sdk';
 import { encode } from '@toon-format/toon';
 import type { Packet, SourceIssue } from './types.ts';
 
@@ -43,19 +43,30 @@ export function wire(value: unknown, format: 'json' | 'toon'): string {
   });
 }
 /** Estimate the larger actual lossless JSON and TOON transport, including newline. */
-export function tokens(value: unknown): number { return Math.ceil(Math.max(Buffer.byteLength(wire(value, 'json') + '\n'), Buffer.byteLength(wire(value, 'toon') + '\n')) / 4); }
-/** Stabilize the self-inclusive byte estimate before enforcing the bound. */
-function account<T>(value: Packet<T>): Packet<T> { let count = tokens(value); while (value.estimatedTokens !== count) { value.estimatedTokens = count; count = tokens(value); } return value; }
-/** Include a deterministic prefix of rows and an omission receipt in the requested budget. */
+export function tokens(value: unknown): number { return estimatePmOutputTokens(Math.max(Buffer.byteLength(wire(value, 'json') + '\n'), Buffer.byteLength(wire(value, 'toon') + '\n'))); }
+/** Include source-issue and row prefixes using SDK-owned bounded envelope fitting. */
 export function packet<T>(investigation: string, revision: number, rows: T[], budget: number, restore: string, issues: SourceIssue[] = []): Packet<T> {
   requireInput(Number.isSafeInteger(budget) && budget > 0 && budget <= 1_000_000, 'Budget must be an integer from 1 to 1000000');
-  let selectedIssues: SourceIssue[] = [];
-  const make = (selected: T[]): Packet<T> => account({ investigation, revision, rows: selected, receipt: { sourceComplete: true, returned: selected.length, omitted: rows.length - selected.length, complete: selected.length === rows.length && selectedIssues.length === issues.length, restore, ...(issues.length > 0 ? { sourceIssues: { returned: selectedIssues, omitted: issues.length - selectedIssues.length } } : {}), estimator: 'ceil(max(json,toon)_utf8_bytes/4)' }, estimatedTokens: 0 });
-  let result = make([]);
-  if (result.estimatedTokens > budget) throw new HypothesisError('budget', 'Budget cannot hold the omission receipt', 'Increase --budget');
-  for (const issue of issues) { selectedIssues = [...selectedIssues, issue]; const next = make([]); if (next.estimatedTokens > budget) { selectedIssues = selectedIssues.slice(0, -1); break; } result = next; }
-  for (const row of rows) { const next = make([...result.rows, row]); if (next.estimatedTokens > budget) break; result = next; }
-  return result;
+  /** Preserve the public receipt while the SDK owns its self-inclusive estimate. */
+  const make = (selected: readonly T[], selectedIssues: readonly SourceIssue[], estimatedTokens: number): Packet<T> => ({ investigation, revision, rows: [...selected], receipt: { sourceComplete: true, returned: selected.length, omitted: rows.length - selected.length, complete: selected.length === rows.length && selectedIssues.length === issues.length, restore, ...(issues.length > 0 ? { sourceIssues: { returned: [...selectedIssues], omitted: issues.length - selectedIssues.length } } : {}), estimator: 'ceil(max(json,toon)_utf8_bytes/4)' }, estimatedTokens });
+  /** Project SDK accounting into the existing packet schema in both measured renderers. */
+  const fit = <Candidate,>(candidates: readonly Candidate[], build: (selected: readonly Candidate[], estimate: number) => Packet<T>): Packet<T> => {
+    const fitted = fitOutputEnvelope(candidates, {
+      tokenBudget: budget, policy: 'prefix',
+      buildEnvelope: (selected, receipt) => ({ packet: build(selected, receipt.estimated_tokens) }),
+      renderers: { json: envelope => wire(envelope.packet, 'json') + '\n', toon: envelope => wire(envelope.packet, 'toon') + '\n' },
+    });
+    return fitted.envelope.packet;
+  };
+  try {
+    // Issue details have priority, but an oversized issue must not block smaller rows.
+    const selectedIssues = issues.length > 0 ? fit(issues, (selected, estimate) => make([], selected, estimate)).receipt.sourceIssues!.returned : [];
+    return fit(rows, (selected, estimate) => make(selected, selectedIssues, estimate));
+  } catch (error) {
+    if (!(error instanceof OutputEnvelopeFitError)) throw error;
+    if (error.code === 'output_envelope_infeasible') throw new HypothesisError('budget', 'Budget cannot hold the omission receipt', 'Increase --budget');
+    throw new HypothesisError(error.code, 'Output fitting could not certify a bounded packet', 'Use pm hypothesis show to restore the complete investigation');
+  }
 }
 
 /** Normalize JSON-compatible envelopes without changing any data string. */

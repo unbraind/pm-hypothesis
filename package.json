@@ -50,7 +50,7 @@
     "test:revert": "node test/revert.acceptance.ts"
   },
   "peerDependencies": {
-    "@unbrained/pm-cli": ">=2026.10.26"
+    "@unbrained/pm-cli": ">=2026.11.2"
   },
   "devDependencies": {
     "@babel/eslint-parser": "8.0.7",

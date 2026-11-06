@@ -1,0 +1,31 @@
+id: pm-hypothesis-sdk-envelope-fitter
+title: Adopt SDK whole-envelope output fitting
+description: Replace private packet fitting and token estimation for audit G6 while preserving domain selection and receipts.
+type: Chore
+status: in_progress
+priority: 2
+tags[1]: sdk-adoption
+created_at: "2026-11-06T17:32:09.278Z"
+updated_at: "2026-11-06T17:37:41.963Z"
+assignee: codex-sol
+claim_principal: codex-sol
+author: codex-sol
+acceptance_criteria: SDK owns measurement convergence and work ceilings; preserve issue priority and row prefix semantics; cover exact transport budgets and typed safe refusals in real gitless SDK trackers
+parent: pm-hypothesis-build
+comments[2]{created_at,author,text}:
+  "2026-11-06T17:32:15.068Z",codex-sol,"Companion pm-cli-website-l179 (G6), read only. Plan: adopt sdk/output fitOutputEnvelope and canonical estimatePmOutputTokens, retain source-issue-first prefix selection, lossless renderers and public packet receipts. Test real non-git SDK trackers, exact newline-inclusive JSON/TOON boundaries and typed work/infeasible refusals; record behavioral revert proofs. SDK 2026.11.2 already provides the public fitter, so keep the pinned dependency."
+  "2026-11-06T17:37:37.447Z",codex-sol,"Implemented public SDK fitOutputEnvelope plus estimatePmOutputTokens. Removed private account fixed-point loop and both admission loops. Retained two-phase issue-first/row-prefix domain policy and existing lossless wire/receipt shape. Peer and manifest floor now match the unchanged tested SDK 2026.11.2 pin. Targeted hypothesis/source-validity tests: 19 passed; new real gitless tracker envelope test passed via pm test. Typecheck, lint, duplication (0 percent) and docstrings passed. Behavioral proof in a disposable copy: baseline 46f5c49 core fails the new work-limit assertion after all compatibility assertions pass. Separate ceiling-removal proof is recorded by test/revert.acceptance.ts."
+files[6]{path,scope}:
+  manifest.json,project
+  package-lock.json,project
+  package.json,project
+  src/core.ts,project
+  test/envelope.test.ts,project
+  test/revert.acceptance.ts,project
+tests[2]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
+  node --test --test-concurrency=2 test/envelope.test.ts,project,codex-sol,"2026-11-06T17:35:54.663Z",local_mutation,hypothesis-sdk-envelope-fitter
+  node test/revert.acceptance.ts 'SDK envelope',project,codex-sol,"2026-11-06T17:37:38.915Z",local_mutation,hypothesis-sdk-envelope-fitter
+docs[2]{path,scope}:
+  ARCHITECTURE.md,project
+  README.md,project
+body: ""

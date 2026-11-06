@@ -8,15 +8,15 @@ This package is unreleased. Publication requires maintainer approval. The comman
 
 ## Install
 
-Requires Node >=22.18 and pm >=2026.10.26. Development pins pm 2026.10.26 for native batch validation and managed-extension preview support.
+Requires Node >=22.18 and pm >=2026.11.2. Development pins pm 2026.11.2 for native batch validation, managed-extension preview and bounded whole-envelope fitting.
 
 ```sh
 npm ci
 npm pack
 # In a separate project; replace package.tgz with the actual packed filename:
-npm install @unbrained/pm-cli@2026.10.26 ./package.tgz
+npm install @unbrained/pm-cli@2026.11.2 ./package.tgz
 # Or:
-bun add @unbrained/pm-cli@2026.10.26 ./package.tgz
+bun add @unbrained/pm-cli@2026.11.2 ./package.tgz
 npx --no-install pm init --prefix incident --defaults
 npx --no-install pm package install ./package.tgz
 # The pm package installer also accepts a package name after publication:
