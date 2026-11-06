@@ -8,7 +8,7 @@ This package is unreleased. Publication requires maintainer approval. The comman
 
 ## Install
 
-Requires Node >=22.18 and pm >=2026.11.2. Development pins pm 2026.11.2 for native batch validation, managed-extension preview and bounded whole-envelope fitting.
+Requires Node >=22.18 and pm >=2026.11.2. Development pins pm 2026.11.3 for native batch validation, managed-extension preview and bounded whole-envelope fitting.
 
 ```sh
 npm ci
