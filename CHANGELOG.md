@@ -10,3 +10,7 @@
 - Records investigation context ([pm-hypothesis-records](https://github.com/unbraind/pm-hypothesis/blob/main/.agents/pm/features/pm-hypothesis-records.toon))
 - Resume investigation context ([pm-hypothesis-resume](https://github.com/unbraind/pm-hypothesis/blob/main/.agents/pm/features/pm-hypothesis-resume.toon))
 - Safety investigation context ([pm-hypothesis-safety](https://github.com/unbraind/pm-hypothesis/blob/main/.agents/pm/features/pm-hypothesis-safety.toon))
+
+### Other
+
+- Adopt SDK whole-envelope output fitting ([pm-hypothesis-sdk-envelope-fitter](https://github.com/unbraind/pm-hypothesis/blob/main/.agents/pm/chores/pm-hypothesis-sdk-envelope-fitter.toon))
