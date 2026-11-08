@@ -113,3 +113,7 @@ Exit codes: **0** success (bounded omissions remain explicit), **2** invalid inp
 Replays compare canonical declarations rather than ids alone; a byte tie-break distinguishes Unicode keys that collate equally. Once package fields are installed, opening context preserves native type removals instead of silently repairing schema. All SDK and JSON/TOON data fields remain exact; serialization escapes terminal controls reversibly. Native item titles are display labels. Recovery records superseded attempts in the package runtime cache through SDK primitives and plans against current item/schema preconditions. The SDK journal-management gap is tracked by pm-cli#1597; no journal is deleted or blindly replayed.
 
 Text inputs must be well-formed Unicode (at most 8,192 UTF-16 code units). Malformed surrogate sequences refuse before admission because the native TOON transport cannot encode them. Valid Unicode is preserved without normalization.
+
+GitHub issue sync uses `changelog:automation` to run the same full generation
+policy that the package changelog check verifies. Reusable workflow defaults
+therefore cannot add a different pending-release policy to this caller.
