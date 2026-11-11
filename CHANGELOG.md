@@ -11,9 +11,9 @@
 
 ### Fixed
 
-- Keep sync changelog regeneration consistent with the release gate ([pm-hypothesis-sync-changelog](https://github.com/unbraind/pm-hypothesis/blob/main/.agents/pm/issues/pm-hypothesis-sync-changelog.toon))
 - Interrupted open cannot recover after an unrelated edit changes the initialization precondition ([pm-hypothesis-concurrency](https://github.com/unbraind/pm-hypothesis/blob/main/.agents/pm/issues/pm-hypothesis-concurrency.toon))
 - Public SDK output escaping changes exact observation keys and values ([pm-hypothesis-records](https://github.com/unbraind/pm-hypothesis/blob/main/.agents/pm/issues/pm-hypothesis-records.toon))
+- Keep sync changelog regeneration consistent with the release gate ([pm-hypothesis-sync-changelog](https://github.com/unbraind/pm-hypothesis/blob/main/.agents/pm/issues/pm-hypothesis-sync-changelog.toon))
 
 ### Other
 
