@@ -6,13 +6,13 @@ status: closed
 priority: 2
 tags[1]: sdk-adoption
 created_at: "2026-11-06T17:32:09.278Z"
-updated_at: "2026-11-14T08:53:57.111Z"
+updated_at: "2026-11-14T10:09:40.594Z"
 closed_at: "2026-11-14T08:53:57.050Z"
-completed_at: "2026-11-14T08:53:57.050Z"
+completed_at: "2026-11-06T20:50:51.000Z"
 author: codex-sol
 acceptance_criteria: SDK owns measurement convergence and work ceilings; preserve issue priority and row prefix semantics; cover exact transport budgets and typed safe refusals in real gitless SDK trackers
 parent: pm-hypothesis-build
-comments[7]{created_at,author,text}:
+comments[8]{created_at,author,text}:
   "2026-11-06T17:32:15.068Z",codex-sol,"Companion pm-cli-website-l179 (G6), read only. Plan: adopt sdk/output fitOutputEnvelope and canonical estimatePmOutputTokens, retain source-issue-first prefix selection, lossless renderers and public packet receipts. Test real non-git SDK trackers, exact newline-inclusive JSON/TOON boundaries and typed work/infeasible refusals; record behavioral revert proofs. SDK 2026.11.2 already provides the public fitter, so keep the pinned dependency."
   "2026-11-06T17:37:37.447Z",codex-sol,"Implemented public SDK fitOutputEnvelope plus estimatePmOutputTokens. Removed private account fixed-point loop and both admission loops. Retained two-phase issue-first/row-prefix domain policy and existing lossless wire/receipt shape. Peer and manifest floor now match the unchanged tested SDK 2026.11.2 pin. Targeted hypothesis/source-validity tests: 19 passed; new real gitless tracker envelope test passed via pm test. Typecheck, lint, duplication (0 percent) and docstrings passed. Behavioral proof in a disposable copy: baseline 46f5c49 core fails the new work-limit assertion after all compatibility assertions pass. Separate ceiling-removal proof is recorded by test/revert.acceptance.ts."
   "2026-11-06T17:40:23.089Z",codex-sol,"PR #22 opened at head 2cde062; queued the required review immediately. Both linked tests passed through pm test (result persistence is disabled by project policy). Budget-option behavioral revert also passed: test/revert.acceptance.ts with packet: ignore output budget. Full npm release gate is running with isolated Git identity and two available CPU workers; full CI is running independently. No companion tracker writes."
@@ -20,6 +20,7 @@ comments[7]{created_at,author,text}:
   "2026-11-06T17:55:21.452Z",codex-sol,"Task-specific gate policy assigns the full gate to CI. Required local targeted tests, lint and typecheck are passed; the additional local full-suite run was stopped without certification after passing the admission model and completed interleaving cases. Full npm/Bun coverage is not claimed locally. CI run 42263639310 remains queued. Review remains queued and is not approval."
   "2026-11-06T18:05:33.314Z",codex-sol,"Integrated main b99f506 toolchain update without an adoption dependency bump: development SDK is now 2026.11.3; supported floor 2026.11.2 was verified before integration. Exact integrated-source targeted command: node --test --test-concurrency=2 test/envelope.test.ts test/hypothesis.test.ts test/source-validity.test.ts; 20 passed, 0 failed. Both linked pm tests passed again, including the SDK ceiling-removal proof. Baseline 46f5c49 private core also failed the expected work-limit assertion on this toolchain. Typecheck, lint, build, duplication (0 percent), docstrings, production audit (0 vulnerabilities) and publication attestation passed. Isolated tracker health passed; inherited global extension version skew is separate from package behavior. Full CI and queued review remain unverified; no closure or merge is authorized. PR: https://github.com/unbraind/pm-hypothesis/pull/22"
   "2026-11-06T18:09:41.186Z",codex-sol,"Queue cutoff receipt: runtime CI for code head 3502afa remains queued at https://github.com/unbraind/pm-hypothesis/actions/runs/42267645106; CodeQL is pending at https://github.com/unbraind/pm-hypothesis/actions/runs/42267645095. The shared review queue has not reached PR #22: zero completed CodeRabbit rounds, no review threads returned, no approval claimed. Required bot reactions were applied. The 30-minute CI cutoff from the initial push is reached; preserve these pending receipts for the orchestrator. This final tracker-only receipt does not change the tested code; the PR body carries the latest head and check links. Item remains in_progress with its claim released. No PR merge or release performed."
+  "2026-11-14T10:09:40.594Z",codex-sweep-1114,"Release-attribution correction: completed_at = 2026-11-06T20:50:51Z from https://github.com/unbraind/pm-hypothesis/pull/22 (merge SHA 6087789ecb52fbfbbffced92f9f265378e77c900); no fetched release tag contains that merge commit, so release remains unset and this work is genuinely unreleased."
 files[6]{path,scope}:
   manifest.json,project
   package-lock.json,project
