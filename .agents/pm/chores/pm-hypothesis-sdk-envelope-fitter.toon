@@ -2,11 +2,13 @@ id: pm-hypothesis-sdk-envelope-fitter
 title: Adopt SDK whole-envelope output fitting
 description: Replace private packet fitting and token estimation for audit G6 while preserving domain selection and receipts.
 type: Chore
-status: in_progress
+status: closed
 priority: 2
 tags[1]: sdk-adoption
 created_at: "2026-11-06T17:32:09.278Z"
-updated_at: "2026-11-06T18:09:41.187Z"
+updated_at: "2026-11-14T08:53:57.111Z"
+closed_at: "2026-11-14T08:53:57.050Z"
+completed_at: "2026-11-14T08:53:57.050Z"
 author: codex-sol
 acceptance_criteria: SDK owns measurement convergence and work ceilings; preserve issue priority and row prefix semantics; cover exact transport budgets and typed safe refusals in real gitless SDK trackers
 parent: pm-hypothesis-build
@@ -31,4 +33,5 @@ tests[2]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
 docs[2]{path,scope}:
   ARCHITECTURE.md,project
   README.md,project
+close_reason: "https://github.com/unbraind/pm-hypothesis/pull/22 merged 2026-11-06T20:50:51Z; merge SHA 6087789ecb52fbfbbffced92f9f265378e77c900; PR head 9f2827e4efd7181da46643ed20c5b2b2963886f7. Delivered: SDK whole-envelope fitting owns measurement convergence and work ceilings, preserving issue priority, row prefixes, exact transport budgets and typed refusals. Green at that head: test (22), codeql, test (26), CodeQL, CodeRabbit. Other check outcomes: enable-auto-merge: SKIPPED; cubic · AI code reviewer: NEUTRAL; Sourcery review: SKIPPED (not counted as green)."
 body: ""

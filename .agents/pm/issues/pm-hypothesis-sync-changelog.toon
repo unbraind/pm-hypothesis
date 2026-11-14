@@ -2,11 +2,13 @@ id: pm-hypothesis-sync-changelog
 title: Keep sync changelog regeneration consistent with the release gate
 description: ""
 type: Issue
-status: in_progress
+status: closed
 priority: 1
 tags[3]: automation,changelog,"gh:unbraind/pm-hypothesis#14"
 created_at: "2026-11-08T03:15:46.409Z"
-updated_at: "2026-11-08T05:48:13.509Z"
+updated_at: "2026-11-14T08:53:52.948Z"
+closed_at: "2026-11-14T08:53:52.825Z"
+completed_at: "2026-11-14T08:53:52.825Z"
 author: pi-agent
 acceptance_criteria: The configured sync generation and package changelog check agree on real temporary trackers; Keep dependency pins and all coverage thresholds unchanged and record a behavioral revert failure
 comments[5]{created_at,author,text}:
@@ -23,4 +25,5 @@ tests[1]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
   node --test --test-concurrency=2 test/automation-changelog.test.ts,project,pi-agent,"2026-11-08T03:16:15.145Z",local_mutation,fix/sync-changelog-1108
 docs[1]{path,scope}:
   README.md,project
+close_reason: "https://github.com/unbraind/pm-hypothesis/pull/23 merged 2026-11-08T08:35:33Z; merge SHA 6ed0915c2ff272cca29670044db620a0d9322a5a; PR head be223d71042bef6fddda710b72bf4bb65fa962d4. Delivered: Issue-sync changelog generation agrees with package release checks with real tracker regression and unchanged pins and coverage thresholds. Green at that head: test (22), codeql, test (26), CodeQL, CodeRabbit. Other check outcomes: enable-auto-merge: SKIPPED; cubic · AI code reviewer: NEUTRAL; Sourcery review: SKIPPED (not counted as green)."
 body: ""
