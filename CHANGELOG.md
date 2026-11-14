@@ -17,5 +17,5 @@
 
 ### Other
 
-- Adopt SDK whole-envelope output fitting ([pm-hypothesis-sdk-envelope-fitter](https://github.com/unbraind/pm-hypothesis/blob/main/.agents/pm/chores/pm-hypothesis-sdk-envelope-fitter.toon))
 - Close delivered items and return idle in-progress items to open (2026-11-14 sweep) ([pm-hypothesis-sweep-1114](https://github.com/unbraind/pm-hypothesis/blob/main/.agents/pm/chores/pm-hypothesis-sweep-1114.toon))
+- Adopt SDK whole-envelope output fitting ([pm-hypothesis-sdk-envelope-fitter](https://github.com/unbraind/pm-hypothesis/blob/main/.agents/pm/chores/pm-hypothesis-sdk-envelope-fitter.toon))
