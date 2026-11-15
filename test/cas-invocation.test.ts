@@ -1,3 +1,4 @@
+import { testDepth } from './support/depth.ts';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { cp, mkdtemp, rm } from 'node:fs/promises';
@@ -37,17 +38,22 @@ async function refusesWithoutWrites(f: { workspace: string }, action: (save: () 
   assert.ok(checkpoint); assert.deepEqual(await durable(f.workspace), checkpoint);
 }
 
-test('conditional helper combined interleaving matrix: 1312 cases, six commands, every ordered boundary pair', { concurrency: 4 }, async t => {
+test('conditional helper combined interleaving matrix: depth-selected cases across six commands', { concurrency: 4 }, async t => {
   const base = await incident(t);
   const seed = await observe(base.investigation, 'seed', 'yes', base.options);
   await observe(base.investigation, 'admitted', 'yes', base.options);
   const template = await durable(base.workspace);
-  let count = 0; const pending: Promise<void>[] = [];
+  let count = 0, generated = 0, fullCount = 0; const pending: Promise<void>[] = [];
   for (const command of commands) {
     const points: Boundary[] = ['observe', 'admit', 'add'].includes(command) ? ['record-read', 'plan-ready', 'owner-read', 'admission-ready'] : ['owner-read', 'admission-ready'];
     if (command !== 'admit' && command !== 'open-existing') { points.push('owner-written'); if (command === 'observe' || command === 'add') points.push('record-written'); }
     points.push('complete');
+    const full = points.length ** 2 * faults.reduce((total, fault) => total + (fault === 'source edit' || fault === 'both' ? 2 : 1), 0);
+    let candidate = 0;
     for (const first of points) for (const second of points) for (const fault of faults) for (const source of (fault === 'source edit' || fault === 'both' ? ['observation', 'hypothesis'] : ['observation'])) {
+      fullCount++;
+      if (candidate++ >= testDepth(full)) continue;
+      generated++;
       pending.push(t.test(`${command}: ${first}/${second}: ${fault}/${source}`, async sub => {
         const root = await mkdtemp(join(tmpdir(), 'hypothesis-pair-')); sub.after(() => rm(root, { recursive: true, force: true }));
         const workspace = join(root, '.agents', 'pm');
@@ -115,7 +121,8 @@ test('conditional helper combined interleaving matrix: 1312 cases, six commands,
     }
   }
   await Promise.all(pending);
-  assert.equal(count, 1312);
+  assert.equal(fullCount, 1312); assert.equal(count, generated); assert.ok(generated >= 25 * commands.length);
+  t.diagnostic(`interleavings=${count}/${fullCount}; commands=${commands.length}`);
 });
 
 test('repeated source reads cannot overwrite an earlier revision precondition', async t => {

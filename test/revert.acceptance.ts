@@ -1,3 +1,4 @@
+import { testTime } from './support/time.ts';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { cpSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
@@ -42,7 +43,7 @@ for (const proof of selected) {
   try {
     const edited = original.replace(proof.before, proof.after);
     writeFileSync(path, edited);
-    const result = spawnSync(process.execPath, ['--test', `--test-name-pattern=${proof.pattern}`, proof.test], { cwd: scratch, encoding: 'utf8', timeout: 300000 });
+    const result = spawnSync(process.execPath, ['--test', `--test-name-pattern=${proof.pattern}`, proof.test], { cwd: scratch, encoding: 'utf8', timeout: testTime(300000) });
     assert.equal(result.error, undefined); assert.equal(result.status, 1, `${proof.label} must fail behaviorally`); assert.match(result.stdout + result.stderr, /AssertionError|Missing expected rejection/);
     console.log(`REVERT PROVED: ${proof.label}`);
   } finally { writeFileSync(path, original); assert.equal(readFileSync(path, 'utf8'), original); }
