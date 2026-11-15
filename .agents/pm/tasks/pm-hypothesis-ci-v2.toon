@@ -4,13 +4,16 @@ description: Companion pm-cli-website-dyhg. Preserve required checks and all rel
 type: Task
 status: in_progress
 priority: 2
-tags[2]: ci,performance
+tags[3]: ci,"gh:unbraind/pm-hypothesis#35",performance
 created_at: "2026-11-15T15:11:15.927Z"
-updated_at: "2026-11-15T15:14:57.675Z"
+updated_at: "2026-11-15T15:39:58.585Z"
 author: codex-sol
-comments[2]{created_at,author,text}:
+comments[5]{created_at,author,text}:
   "2026-11-15T15:14:14.299Z",codex-sol,"Required checks verified: test (22), test (26), codeql. CodeQL stays unfiltered. Baseline main run 43707230819: Node 22 wall 46m40s/execution 9m06s; Node 26 wall 65m42s/execution 11m16s. Job logs recovered via jobs API: full coverage phases 308.93s/304.10s, exhaustive 1312-case interleaving matrix 287.32s, transport property cases 88.41s. Quick selects deterministic prefixes per command and format plus 25/100 SDK samples. Generated counts remain nonvacuous; fixed boundary/seed suites remain unchanged. Cheap tier retains identity/privacy, tooling/docs links, changelog automation and actual pack inventory."
   "2026-11-15T15:14:55.203Z",codex-sol,"Typecheck passed (2.56s), lint passed (3.06s), strict unique-key YAML parsing passed; actionlint unavailable. Touched quick suites are running. Test-scale audit found only acceptance/revert child watchdogs to scale; product token budgets and assertions remain literal. No control-character filenames are generated. Full depth is not run locally."
+  "2026-11-15T15:16:59.443Z",codex-sol,"PR #35 opened at 87f1df2; required test (22), test (26) and codeql jobs are queued. Quick matrix enumerates 180 actual cases across all six commands; full still enumerates/asserts 1312. Product budgets and fixed boundary contracts remain unscaled. Packed acceptance proves Bun project installs and bunx local CLI/extension activation; no global/ephemeral install claim is added."
+  "2026-11-15T15:19:33.862Z",codex-sol,Touched quick property/transport/interleaving/helper suites passed through pm test in 318.95s. Typecheck and lint passed. One quick coverage run started with original four 100 percent thresholds and a 20-minute host budget. No full local depth is run. Required PR checks remain queued; execution and queue-inclusive wall times are unavailable.
+  "2026-11-15T15:39:55.273Z",codex-sol,"Local proof complete: typecheck and lint passed; touched quick property/transport/interleaving/helper suites passed in 318.95s. The single optional quick coverage attempt reached the 20-minute host cap (exit 124) while finite recovery cases were still passing; no complete coverage report was produced. Thresholds and source scope remain unchanged. All three required PR jobs were still queued after about 24 minutes, so no completed wall time exists. No full-depth local run, merges, review replies or variable/protection edits. Item remains open and claim released."
 files[8]{path,scope}:
   .github/workflows/ci-deep.yml,project
   .github/workflows/ci.yml,project
@@ -20,7 +23,7 @@ files[8]{path,scope}:
   test/roundtrip.test.ts,project
   test/support/depth.ts,project
   test/support/time.ts,project
-tests[3]:
+tests[4]:
   - command: npm run typecheck
     scope: project
     provenance:
@@ -41,6 +44,14 @@ tests[3]:
     provenance:
       author: codex-sol
       created_at: "2026-11-15T15:13:11.628Z"
+      source_kind: local_mutation
+      source_ref: ci/quick-pr-tier-deep-local-tier
+  - command: env PM_TEST_DEPTH=quick PM_TEST_TIME_SCALE=3 npm run coverage
+    scope: project
+    timeout_seconds: 1200
+    provenance:
+      author: codex-sol
+      created_at: "2026-11-15T15:39:57.063Z"
       source_kind: local_mutation
       source_ref: ci/quick-pr-tier-deep-local-tier
 docs[1]{path,scope}:

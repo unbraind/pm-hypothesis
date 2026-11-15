@@ -56,3 +56,11 @@ property cases 88.41s. Owner fleet measurement: 39,929 runner-minutes/day and
 median PR wall time 45–90m, including about 28m queueing. Full depth is deferred
 to deep CI after merge. Local/hosted timings use different hardware and cannot
 establish a controlled speedup ratio.
+
+Local proof: typecheck and lint passed. Touched quick suites passed in 318.95s,
+including 180 generated interleavings across six commands. The one optional
+quick coverage attempt hit its 20-minute host cap while finite recovery cases
+were still passing (exit 124); no complete local coverage report exists. This
+is not evidence that quick coverage meets the unchanged thresholds. PR CI
+retains that certification gate. No full-depth run was attempted locally.
+Required PR jobs were still queued at handoff, so completed wall time is unknown.
