@@ -1,3 +1,4 @@
+import { testTime } from './support/time.ts';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -8,7 +9,7 @@ import { gitEnvironment, npmEnvironment } from '../scripts/environment.ts';
 
 /** Execute an isolated packed-consumer command and retain its exact exit evidence. */
 function execute(cwd: string, executable: string, args: string[], env: NodeJS.ProcessEnv): string {
-  const result = spawnSync(executable, args, { cwd, env, encoding: 'utf8', timeout: 300000 }); assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stdout + result.stderr); return result.stdout;
+  const result = spawnSync(executable, args, { cwd, env, encoding: 'utf8', timeout: testTime(300000) }); assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stdout + result.stderr); return result.stdout;
 }
 for (const manager of ['npm', 'bun']) test(`packed ${manager} and ${manager === 'npm' ? 'npx' : 'bunx'} investigation journey`, t => {
   const repository = resolve(import.meta.dirname, '..'); const root = mkdtempSync(join(tmpdir(), 'hypothesis-packed-')); t.after(() => rmSync(root, { recursive: true, force: true }));

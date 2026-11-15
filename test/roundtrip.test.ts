@@ -1,3 +1,4 @@
+import { testDepth } from './support/depth.ts';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { spawnSync } from 'node:child_process';
@@ -21,7 +22,7 @@ test('seeded next-to-observe property preserves random keys and values in both o
   const random = (max: number) => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed % max; };
   const alphabet = ['<', '>', '"', "'", '\n', '\r', '\t', '\u001b[31m', '\u009b31m', '\u007f', 'é', '雪', '🧪', '\\', 'a', '=', ',', '`', '\\u003c', ':', '[', ']', '#', '|' ];
   const keys = ['probe-' + 'x'.repeat(4000), 'probe-' + '雪'.repeat(1500), ...alphabet.map(character => 'probe-' + character), ...Array.from({ length: 15 }, () => 'probe-' + Array.from({ length: 5 }, () => alphabet[random(alphabet.length)]).join(''))];
-  for (const format of ['toon', 'json'] as const) for (const key of keys) {
+  for (const format of ['toon', 'json'] as const) for (const key of keys.slice(0, testDepth(keys.length))) {
     const f = await tracker(t); const id = f.investigation;
     const left = 'left-' + key; const right = 'right-' + key;
     const a = await add(id, 'Left explanation', [{ observation: key, value: left }], f.options);

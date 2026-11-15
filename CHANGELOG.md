@@ -17,4 +17,5 @@
 
 ### Other
 
+- Apply Fleet CI v2 quick and deep tiers ([pm-hypothesis-ci-v2](https://github.com/unbraind/pm-hypothesis/blob/main/.agents/pm/tasks/pm-hypothesis-ci-v2.toon))
 - Adopt SDK whole-envelope output fitting ([pm-hypothesis-sdk-envelope-fitter](https://github.com/unbraind/pm-hypothesis/blob/main/.agents/pm/chores/pm-hypothesis-sdk-envelope-fitter.toon))
