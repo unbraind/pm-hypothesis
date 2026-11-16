@@ -5,7 +5,7 @@ PRs and dispatch use quick depth, cancel superseded PR runs and cap each job at
 25 minutes. CodeQL is required and remains unfiltered, with its weekly schedule
 and a 30-minute timeout. No release caller or release verifier script changes.
 
-| Check | Code PR 22 | Code PR 26 | Docs/tracker PR, both | Deep 22 + 26 |
+| Check | Code PR 22 | Code PR 26 | Docs/tracker PR, both | Deep 22/26 × npm/Bun |
 | --- | --- | --- | --- | --- |
 | npm ci, prepare merge drivers | yes | yes | yes | yes |
 | Strict pm health with required merge drivers | yes | yes | yes | yes |
@@ -40,9 +40,9 @@ Acceptance/revert child watchdogs alone scale via validated positive finite
 and assertions remain literal; the finite model suites have no speed deadline.
 
 Deep runs on main pushes, dispatch and daily at 02:29 UTC, away from hourly :41
-release reconciliation and Monday 01:47 CodeQL. Distinct `deep (22)`/`deep (26)`
-checks run full npm and Bun release gates, with `PM_TEST_DEPTH=full`,
-`PM_TEST_TIME_SCALE=3`, per-ref cancellation and a 120-minute limit. Local
+release reconciliation and Monday 01:47 CodeQL. Distinct `deep (22, npm)`/`deep (22, bun)`/`deep (26, npm)`/`deep (26, bun)`
+checks each run one full release gate, with `PM_TEST_DEPTH=full`,
+`PM_TEST_TIME_SCALE=3`, per-ref queuing without cancelling active runs and a 120-minute limit. Local
 `pm-local` runners retain persistent npm caches and use preinstalled Bun (whose
 version is logged); `PM_LOCAL_DEEP=off` selects hosted Ubuntu. Behavioral revert
 and real-data acceptance scripts were not separate jobs in the original CI and
@@ -64,3 +64,14 @@ were still passing (exit 124); no complete local coverage report exists. This
 is not evidence that quick coverage meets the unchanged thresholds. PR CI
 retains that certification gate. No full-depth run was attempted locally.
 Required PR jobs were still queued at handoff, so completed wall time is unknown.
+
+Template follow-up: executable tracker files (`mjs`, `cjs`, `js`, `jsx`, `ts`,
+`tsx`, `mts`, `cts`, `sh`), tracker extensions and executable files under `docs/`
+select the code tier, including nested paths. CodeQL is a required check
+(`codeql`), so its paths remain unfiltered. Existing hosted-only npm cache restoration and Bun setup, with
+`bun --version` on local runners, are retained. No quick-depth reduction or
+sharding was needed from the latest successful PR execution measurements.
+
+Follow-up baseline: [successful PR run 43731159529](https://github.com/unbraind/pm-hypothesis/actions/runs/43731159529).
+Node 22/26 execution: 8m43s / 5m40s; created-to-completed including queue:
+111m29s / 112m54s. Both executions fit the approximately 15-minute target.
