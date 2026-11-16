@@ -17,5 +17,6 @@
 
 ### Other
 
+- Standardize the release gate on owner approval with a daily release schedule ([pm-hypothesis-d9dg](https://github.com/unbraind/pm-hypothesis/blob/main/.agents/pm/tasks/pm-hypothesis-d9dg.toon))
 - Apply Fleet CI v2 quick and deep tiers ([pm-hypothesis-ci-v2](https://github.com/unbraind/pm-hypothesis/blob/main/.agents/pm/tasks/pm-hypothesis-ci-v2.toon))
 - Adopt SDK whole-envelope output fitting ([pm-hypothesis-sdk-envelope-fitter](https://github.com/unbraind/pm-hypothesis/blob/main/.agents/pm/chores/pm-hypothesis-sdk-envelope-fitter.toon))
