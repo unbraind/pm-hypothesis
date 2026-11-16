@@ -4,13 +4,11 @@ description: Companion pm-cli-website-dyhg. Preserve required checks and all rel
 type: Task
 status: in_progress
 priority: 2
-tags[3]: ci,"gh:unbraind/pm-hypothesis#35",performance
+tags[4]: ci,"gh:unbraind/pm-hypothesis#35","gh:unbraind/pm-hypothesis#36",performance
 created_at: "2026-11-15T15:11:15.927Z"
-updated_at: "2026-11-16T08:29:35.562Z"
-assignee: codex-sol
-claim_principal: codex-sol
+updated_at: "2026-11-16T08:40:59.394Z"
 author: codex-sol
-comments[8]{created_at,author,text}:
+comments[9]{created_at,author,text}:
   "2026-11-15T15:14:14.299Z",codex-sol,"Required checks verified: test (22), test (26), codeql. CodeQL stays unfiltered. Baseline main run 43707230819: Node 22 wall 46m40s/execution 9m06s; Node 26 wall 65m42s/execution 11m16s. Job logs recovered via jobs API: full coverage phases 308.93s/304.10s, exhaustive 1312-case interleaving matrix 287.32s, transport property cases 88.41s. Quick selects deterministic prefixes per command and format plus 25/100 SDK samples. Generated counts remain nonvacuous; fixed boundary/seed suites remain unchanged. Cheap tier retains identity/privacy, tooling/docs links, changelog automation and actual pack inventory."
   "2026-11-15T15:14:55.203Z",codex-sol,"Typecheck passed (2.56s), lint passed (3.06s), strict unique-key YAML parsing passed; actionlint unavailable. Touched quick suites are running. Test-scale audit found only acceptance/revert child watchdogs to scale; product token budgets and assertions remain literal. No control-character filenames are generated. Full depth is not run locally."
   "2026-11-15T15:16:59.443Z",codex-sol,"PR #35 opened at 87f1df2; required test (22), test (26) and codeql jobs are queued. Quick matrix enumerates 180 actual cases across all six commands; full still enumerates/asserts 1312. Product budgets and fixed boundary contracts remain unscaled. Packed acceptance proves Bun project installs and bunx local CLI/extension activation; no global/ephemeral install claim is added."
@@ -19,6 +17,7 @@ comments[8]{created_at,author,text}:
   "2026-11-16T08:24:30.408Z",codex-sol,"Batch 2 template follow-up: split deep validation into Node 22/26 x npm/Bun with one conditional full release gate per job; preserve runner selection and full depth/time scale; disable deep cancellation; extend executable tracker/docs routing. Required CodeQL check remains unfiltered. Existing hosted-only npm cache restoration and Bun installation plus version logging already conform. Release callers, sync workflows, verifier scripts, protection and variables stay unchanged."
   "2026-11-16T08:29:07.295Z",codex-sol,"Latest successful PR run https://github.com/unbraind/pm-hypothesis/actions/runs/43731159529: Node 22/26 execution 8m43s/5m40s; created-to-completed including queue 111m29s/112m54s. Both executions fit the approximately 15-minute target, so item 6 needs no quick-depth or sharding change. Items 1, 2 and 5 changed; item 3 exempt because CodeQL is required; item 4 already conforms. Added strict unique-key YAML, one-gate matrix, runner setup and executable-path behavioral contracts."
   "2026-11-16T08:29:35.561Z",codex-sol,"Final local proof passed through pm test --run --only-last --progress: strict unique-key YAML parsing of every workflow, workflow contracts, npm run typecheck and npm run lint. actionlint is unavailable. Initial helper annotation/build setup issues were corrected before the passing rerun. No full-depth run attempted locally; deep certification remains after merge. PR observation is bounded to 30 minutes after the final push."
+  "2026-11-16T08:40:56.237Z",codex-sol,"PR https://github.com/unbraind/pm-hypothesis/pull/36, implementation head 61478e7f94eff2d57fb10a69a7399382a515a801: all required checks passed. codeql: execution 0m50s, created-to-completed 4m04s; test (26): execution 5m35s, created-to-completed 7m45s; test (22): execution 7m08s, created-to-completed 9m28s. Job API timestamps include queue in wall time. Slowest logged tests: conditional recovery boundaries 148.35s; recovery state machine: every native journal boundary with unrelated and conflicting edits 109.93s; seeded next-to-observe property preserves random keys and values in both output formats 91.30s; extended admission sequences 83.17s; admission state machine seed 1597: schema, status, replay and transport operations 83.16s. Local workflow contracts, strict YAML, typecheck, lint and committed identity/private-path gates passed. Full-depth certification remains after merge. Final tracker-only receipt will be pushed with claim released; final-head CI is recorded in the PR body during the bounded watch."
 files[9]{path,scope}:
   .github/workflows/ci-deep.yml,project
   .github/workflows/ci.yml,project
