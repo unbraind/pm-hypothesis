@@ -20,27 +20,31 @@ npx --no-install pm hypothesis --help
 To evaluate a source commit, start in the checkout. Choose npm or Bun to pack and install it in a fresh consumer directory.
 
 ```sh
-npm ci
-tarball=$(npm pack --silent) && test -n "$tarball" && test -f "$tarball" || exit 1
-archive="$(pwd)/$tarball"
-consumer=$(mktemp -d -t pm-hypothesis.XXXXXX)
-cd "$consumer"
-npm install "$archive" @unbrained/pm-cli
-npx --no-install pm init incident --defaults --agent-guidance skip
-npx --no-install pm package install ./node_modules/pm-hypothesis
-npx --no-install pm hypothesis --help
+(
+  npm ci
+  tarball=$(npm pack --silent) && test -n "$tarball" && test -f "$tarball" || exit 1
+  archive="$(pwd)/$tarball"
+  consumer=$(mktemp -d -t pm-hypothesis.XXXXXX)
+  cd "$consumer"
+  npm install "$archive" @unbrained/pm-cli
+  npx --no-install pm init incident --defaults --agent-guidance skip
+  npx --no-install pm package install ./node_modules/pm-hypothesis
+  npx --no-install pm hypothesis --help
+)
 ```
 
 ```sh
-npm ci
-tarball=$(npm pack --silent) && test -n "$tarball" && test -f "$tarball" || exit 1
-archive="$(pwd)/$tarball"
-consumer=$(mktemp -d -t pm-hypothesis.XXXXXX)
-cd "$consumer"
-bun add "$archive" @unbrained/pm-cli
-bunx --bun --no-install pm init incident --defaults --agent-guidance skip
-bunx --bun --no-install pm package install ./node_modules/pm-hypothesis
-bunx --bun --no-install pm hypothesis --help
+(
+  npm ci
+  tarball=$(npm pack --silent) && test -n "$tarball" && test -f "$tarball" || exit 1
+  archive="$(pwd)/$tarball"
+  consumer=$(mktemp -d -t pm-hypothesis.XXXXXX)
+  cd "$consumer"
+  bun add "$archive" @unbrained/pm-cli
+  bunx --bun --no-install pm init incident --defaults --agent-guidance skip
+  bunx --bun --no-install pm package install ./node_modules/pm-hypothesis
+  bunx --bun --no-install pm hypothesis --help
+)
 ```
 
 Use `pm hypothesis …`, `npx --no-install pm hypothesis …` or `bunx --bun --no-install pm hypothesis …`. `npm run hypothesis -- …` and `bun run hypothesis -- …` also work with a project script `"hypothesis": "pm hypothesis"`. The packed acceptance test installs the artifact with both package managers and exercises their scripts, npx, native Bun/bunx and the exported SDK.
