@@ -21,7 +21,7 @@ To evaluate a source commit, start in the checkout. Choose npm or Bun to pack an
 
 ```sh
 npm ci
-tarball=$(npm pack --silent)
+tarball=$(npm pack --silent) && test -n "$tarball" && test -f "$tarball" || exit 1
 archive="$(pwd)/$tarball"
 consumer=$(mktemp -d -t pm-hypothesis.XXXXXX)
 cd "$consumer"
@@ -33,7 +33,7 @@ npx --no-install pm hypothesis --help
 
 ```sh
 npm ci
-tarball=$(npm pack --silent)
+tarball=$(npm pack --silent) && test -n "$tarball" && test -f "$tarball" || exit 1
 archive="$(pwd)/$tarball"
 consumer=$(mktemp -d -t pm-hypothesis.XXXXXX)
 cd "$consumer"
@@ -126,7 +126,12 @@ npm run test:real-data
 npm run test:revert
 ```
 
-Gates enforce all four coverage dimensions at 100%, complete source inventory, docstrings on every source declaration, zero jscpd duplication, fleet ESLint, production audit, allowlisted package contents, generated changelog and attested release workflow. Daily and manual releases require maintainer approval through `PM_RELEASE_APPROVED`.
+Gates enforce all four coverage dimensions at 100%, complete source inventory, docstrings on every source declaration, zero jscpd duplication, fleet ESLint, production audit, allowlisted package contents, generated changelog and attested release workflow.
+
+Automated npm publication requires the maintainer to configure a GitHub Actions
+[trusted publisher](https://docs.npmjs.com/trusted-publishers/) for this repository
+with workflow filename `release.yml`. `PM_RELEASE_APPROVED=true` gates daily and manual
+releases on `main`. The trusted publisher authorizes the workflow to publish to npm through OIDC.
 
 Exit codes: **0** success (bounded omissions remain explicit), **2** invalid input, schema, absent observation, budget, unresolved alternatives or SDK refusal, **3** changed owner/source/schema revision, bounded source-lock contention, or `declaration_mismatch` (with both declaration digests). No command executes a proposed evidence request.
 
