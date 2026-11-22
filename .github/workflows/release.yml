@@ -8,6 +8,7 @@ on:
         type: boolean
         default: false
   schedule:
+    - cron: 23 3 * * *
     - cron: 41 * * * *
 permissions: {}
 jobs:
@@ -19,11 +20,11 @@ jobs:
       checks: read
       id-token: write
       issues: write
-    uses: unbraind/pm-ops/.github/workflows/daily-release.yml@7687a35d7522482bd8361d60dbc2589e9afbc81c # v2026.11.14
+    uses: unbraind/pm-ops/.github/workflows/daily-release.yml@6fa60e56331d0fd831421f2221d46d038d4a2360 # v2026.11.19
     with:
       reconcile-only: ${{ (github.event_name == 'schedule' && github.event.schedule ==
         '41 * * * *') || inputs.retire-unpublished == true }}
       retire-unpublished: ${{ github.event_name == 'workflow_dispatch' &&
         inputs.retire-unpublished == true }}
-      release-enabled: ${{ github.ref == 'refs/heads/main' &&
-        vars.PM_HYPOTHESIS_RELEASE_ENABLED == 'true' }}
+      release-enabled: ${{ github.repository == 'unbraind/pm-hypothesis' && github.ref == 'refs/heads/main' &&
+        vars.PM_RELEASE_APPROVED == 'true' }}

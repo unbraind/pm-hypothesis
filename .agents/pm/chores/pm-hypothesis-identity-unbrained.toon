@@ -1,0 +1,21 @@
+id: pm-hypothesis-identity-unbrained
+title: Use the unbrained commit identity
+description: "Apply the 2026-11-19 owner decision to tracked fixtures, documentation, and PM history. Verify identity mapping and package gates."
+type: Chore
+status: open
+priority: 2
+tags: []
+created_at: "2026-11-19T11:33:30.841Z"
+updated_at: "2026-11-19T11:50:36.648Z"
+author: codex-sol
+comments[2]{created_at,author,text}:
+  "2026-11-19T11:33:40.915Z",codex-sol,The owner selected unbrained as the fleet commit name and retained the existing noreply address. Verify package checks and reseal affected PM histories.
+  "2026-11-19T11:50:30.488Z",codex-sol,"Local tests, typecheck, tracker health, and changelog checks completed. History redaction verified for 0 items with zero hash mismatches. Historical Git attribution matched per commit after mapping 1 approved-address records to the fleet name."
+files[2]{path,scope}:
+  .mailmap,project
+  test/automation-changelog.test.ts,project
+tests[3]{command,scope,timeout_seconds,provenance{author,created_at,source_kind,source_ref}}:
+  npm run typecheck,project,600,codex-sol,"2026-11-19T11:49:09.500Z",local_mutation,chore/commit-identity-unbrained
+  node --test --test-concurrency=2 test/automation-changelog.test.ts,project,600,codex-sol,"2026-11-19T11:49:30.056Z",local_mutation,chore/commit-identity-unbrained
+  "npm run identity:check",project,600,codex-sol,"2026-11-19T11:49:55.860Z",local_mutation,chore/commit-identity-unbrained
+body: ""

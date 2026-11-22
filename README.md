@@ -4,23 +4,57 @@ An investigation is context. Keep competing explanations, explicit predictions a
 
 `pm-hypothesis` is a TypeScript pm SDK extension. An investigation is a native Question or Issue. Explanations are linked Questions; original facts are linked Tests with who/when/how provenance. A registered owner field holds the atomic hypothesis set and admission decisions. History and comments preserve changes. No model confidence counts as causal proof, and this package never executes diagnostics: pm-ops owns approved execution.
 
-This package is unreleased. Publication requires maintainer approval. The commands below use the locally packed artifact until publication.
-
 ## Install
 
 Requires Node >=22.18 and pm >=2026.11.2. Development pins pm 2026.11.3 for native batch validation, managed-extension preview and bounded whole-envelope fitting.
 
+Install from npm in a fresh project, then activate the extension.
+
 ```sh
-npm ci
-npm pack
-# In a separate project; replace package.tgz with the actual packed filename:
-npm install @unbrained/pm-cli@2026.11.2 ./package.tgz
-# Or:
-bun add @unbrained/pm-cli@2026.11.2 ./package.tgz
-npx --no-install pm init --prefix incident --defaults
-npx --no-install pm package install ./package.tgz
-# The pm package installer also accepts a package name after publication:
-# pm package install pm-hypothesis
+npm install pm-hypothesis @unbrained/pm-cli
+npx --no-install pm init incident --defaults --agent-guidance skip
+npx --no-install pm package install ./node_modules/pm-hypothesis
+npx --no-install pm hypothesis --help
+```
+
+To evaluate a source commit, start in the checkout. Choose npm or Bun to pack and install it in a fresh consumer directory.
+
+```sh
+(
+  npm ci || exit 1
+  tarball=$(npm pack --silent) && test -n "$tarball" && test -f "$tarball" || exit 1
+  packed_version=$(node -p 'require("./package.json").version') || exit 1
+  archive="$(pwd)/$tarball"
+  consumer=$(mktemp -d -t pm-hypothesis.XXXXXX) && test -n "$consumer" && cd "$consumer" || exit 1
+  npm install "$archive" @unbrained/pm-cli || exit 1
+  npx --no-install pm init incident --defaults --agent-guidance skip || exit 1
+  npx --no-install pm package install ./node_modules/pm-hypothesis || exit 1
+  npx --no-install pm hypothesis --help || exit 1
+  installed_version=$(node -p 'require("./node_modules/pm-hypothesis/package.json").version') || exit 1
+  test "$installed_version" = "$packed_version" || {
+    printf 'Expected version %s, installed %s.\n' "$packed_version" "$installed_version" >&2
+    exit 1
+  }
+)
+```
+
+```sh
+(
+  npm ci || exit 1
+  tarball=$(npm pack --silent) && test -n "$tarball" && test -f "$tarball" || exit 1
+  packed_version=$(node -p 'require("./package.json").version') || exit 1
+  archive="$(pwd)/$tarball"
+  consumer=$(mktemp -d -t pm-hypothesis.XXXXXX) && test -n "$consumer" && cd "$consumer" || exit 1
+  bun add "$archive" @unbrained/pm-cli || exit 1
+  bunx --bun --no-install pm init incident --defaults --agent-guidance skip || exit 1
+  bunx --bun --no-install pm package install ./node_modules/pm-hypothesis || exit 1
+  bunx --bun --no-install pm hypothesis --help || exit 1
+  installed_version=$(node -p 'require("./node_modules/pm-hypothesis/package.json").version') || exit 1
+  test "$installed_version" = "$packed_version" || {
+    printf 'Expected version %s, installed %s.\n' "$packed_version" "$installed_version" >&2
+    exit 1
+  }
+)
 ```
 
 Use `pm hypothesis …`, `npx --no-install pm hypothesis …` or `bunx --bun --no-install pm hypothesis …`. `npm run hypothesis -- …` and `bun run hypothesis -- …` also work with a project script `"hypothesis": "pm hypothesis"`. The packed acceptance test installs the artifact with both package managers and exercises their scripts, npx, native Bun/bunx and the exported SDK.
@@ -106,7 +140,14 @@ npm run test:real-data
 npm run test:revert
 ```
 
-Gates enforce all four coverage dimensions at 100%, complete source inventory, docstrings on every source declaration, zero jscpd duplication, fleet ESLint, production audit, allowlisted package contents, generated changelog and attested release workflow. Release is dispatch-only and requires the maintainer's enabled variable.
+Gates enforce all four coverage dimensions at 100%, complete source inventory, docstrings on every source declaration, zero jscpd duplication, fleet ESLint, production audit, allowlisted package contents, generated changelog and attested release workflow.
+
+Automated npm publication requires the maintainer to configure a GitHub Actions
+[trusted publisher](https://docs.npmjs.com/trusted-publishers/) for this repository
+with workflow filename `release.yml` and select `npm publish` under **Allowed actions**.
+Trusted publishers created after September 3, 2026 default to
+`npm stage publish` only. `PM_RELEASE_APPROVED=true` gates daily and manual
+releases on `main`. The trusted publisher authorizes the workflow to publish to npm through OIDC.
 
 Exit codes: **0** success (bounded omissions remain explicit), **2** invalid input, schema, absent observation, budget, unresolved alternatives or SDK refusal, **3** changed owner/source/schema revision, bounded source-lock contention, or `declaration_mismatch` (with both declaration digests). No command executes a proposed evidence request.
 
