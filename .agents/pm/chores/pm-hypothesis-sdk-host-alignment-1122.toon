@@ -6,11 +6,12 @@ status: in_progress
 priority: 2
 tags: []
 created_at: "2026-11-24T10:39:24.954Z"
-updated_at: "2026-11-24T15:11:11.723Z"
+updated_at: "2026-11-24T15:41:41.094Z"
 author: codex-agent
 acceptance_criteria: Pin the current first-party toolchain and refresh the tracked lockfile; Verify transactional guards evaluate preview and commit with the same actor and distinguish dry run; Keep dependency bullets in all changelog entry points; Pass package release and coverage gates
-comments[1]{created_at,author,text}:
+comments[2]{created_at,author,text}:
   "2026-11-24T15:11:10.522Z",codex-agent,"The top-level SDK failure was native commit still evaluates extension guards excluded from preview. The old host excluded guards from preview. The current host runs transactional guards in both phases with an identical resolved actor and sets dry_run during preview. Assert the same unauthorized actor is refused in both phases with no source item effects, the authorized actor matches committed history, and preview suppresses extension write hooks. Report either policy or precondition refusal as a native conflict. Reverting that diagnosis failed the focused test. Removal of each changelog dependency flag independently failed its regression. The full baseline reached 60 minutes with 1458 passes including all 1312 interleavings, one failure from the old guard expectation, and ten canceled files. All 93 full-depth targeted tests and 15 tracker-linked tests passed. The existing revert suite proved 24/24 cases. npm and Bun release:check at quick CI depth each passed 509/509 and 2/2 packed consumer journeys with 100% statements, branches, functions and lines across 20 sources. Identity had zero violations, the production audit found zero vulnerabilities, and changelog:check passed."
+  "2026-11-24T15:41:41.090Z","harness:claude-code","Review follow-up (CodeRabbit on src/admission.ts): validateBatch now relies on mutation guards being evaluated during preview, which hosts before 2026.11.15 defer to the commit, while the package still declared pm >=2026.11.2. Raised the supported floor to 2026.11.15 in the peer dependency (package.json and package-lock.json), manifest pm_min_version, the README requirement line and ARCHITECTURE.md (fitOutputEnvelope exists from 2026.11.2; the floor is higher because of the preview guards). Build, typecheck, lint, identity check, changelog check and 21 related tests pass."
 files[5]{path,scope}:
   package-lock.json,project
   package.json,project

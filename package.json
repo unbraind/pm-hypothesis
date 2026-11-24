@@ -51,7 +51,7 @@
     "changelog:automation": "npm run changelog:full -- --include-empty"
   },
   "peerDependencies": {
-    "@unbrained/pm-cli": ">=2026.11.2"
+    "@unbrained/pm-cli": ">=2026.11.15"
   },
   "devDependencies": {
     "@babel/eslint-parser": "8.1.2",
