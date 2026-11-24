@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { join } from 'node:path';
-import { commitItemMutations, clearActiveExtensionHooks, mutateWorkspaceJsonWithHistory, readSettings, runWithActiveExtensions, readFileIfExists, setActiveExtensionHooks, writeFileAtomic } from '@unbrained/pm-cli/sdk';
+import { commitItemMutations, clearActiveExtensionHooks, getHistoryPath, mutateWorkspaceJsonWithHistory, PmCliError, readHistoryEntries, readSettings, runWithActiveExtensions, readFileIfExists, setActiveExtensionHooks, writeFileAtomic } from '@unbrained/pm-cli/sdk';
+import type { BeforeMutationHookContext } from '@unbrained/pm-cli/sdk';
 import { admissionSchema, sameSchema, usableSource, usableStatus, validateBatch } from '../src/admission.ts';
 import { Store, state } from '../src/store.ts';
 import { Attempts } from '../src/attempts.ts';
@@ -32,15 +33,53 @@ test('native preview does not adopt a committed journal as fresh validation', as
   await commitItemMutations(input); const before = await durable(f.workspace); await assert.rejects(validateBatch(input), { code: 'conflict' }); assert.deepEqual(await durable(f.workspace), before);
 });
 
-test('native commit still evaluates extension guards excluded from preview', async t => {
-  const f = await tracker(t); let calls = 0;
+test('native preview and commit enforce the same guard actor with distinct dry-run context', async t => {
+  const f = await tracker(t);
+  const calls: Pick<BeforeMutationHookContext, 'actor' | 'dry_run'>[] = [];
+  let writes = 0;
+  const input = { pmRoot: f.workspace, author: 'fixture', transactionId: 'native-live-guard', mutations: [{ op: 'create' as const, id: 'hyp-live-guard', options: { type: 'Test', title: 'Native guarded target', createMode: 'progressive' } }] };
   await runWithActiveExtensions({ path: f.workspace }, async () => {
-  setActiveExtensionHooks({ beforeCommand: [], afterCommand: [], onWrite: [], onRead: [], onIndex: [], beforeMutation: [{ layer: 'project', name: 'native-fixture', run: () => { calls++; throw Error('Synthetic native mutation guard'); } }] });
-  try {
-    const input = { pmRoot: f.workspace, author: 'fixture', transactionId: 'native-live-guard', mutations: [{ op: 'create' as const, id: 'hyp-live-guard', options: { type: 'Test', title: 'Native guarded target', createMode: 'progressive' } }] };
-    const preview = await validateBatch(input); assert.ok(preview.unresolved_commit_constraints.includes('extension_mutation_guards_and_hooks')); assert.equal(calls, 0);
-    const before = await durable(f.workspace); await assert.rejects(commitItemMutations(input)); assert.ok(calls > 0); assert.deepEqual(await durable(f.workspace), before);
-  } finally { clearActiveExtensionHooks(); }
+    setActiveExtensionHooks({
+      beforeCommand: [], afterCommand: [], onRead: [], onIndex: [],
+      onWrite: [{ layer: 'project', name: 'native-fixture', run: () => { writes++; } }],
+      beforeMutation: [{
+        layer: 'project', name: 'native-fixture',
+        run: ({ actor, dry_run }) => {
+          calls.push({ actor, dry_run });
+          return actor.author === input.author
+            ? { allow: true }
+            : { allow: false, code: 'fixture_owner_required', remediation: 'Use the fixture owner identity.' };
+        },
+      }],
+    });
+    try {
+      const before = await durable(f.workspace);
+      const refused = { ...input, author: 'other-fixture', transactionId: 'native-refused-guard' };
+      await assert.rejects(validateBatch(refused), { code: 'conflict', message: 'Native batch precondition or mutation guard refused the proposed records' });
+      assert.equal(writes, 0);
+      await assert.rejects(commitItemMutations(refused), error => error instanceof PmCliError && error.context.code === 'fixture_owner_required');
+      assert.deepEqual(await durable(f.workspace), before);
+      const writesAfterRefusal = writes;
+
+      const preview = await validateBatch(input);
+      assert.ok(preview.unresolved_commit_constraints.includes('extension_write_hooks'));
+      assert.deepEqual(await durable(f.workspace), before);
+      assert.equal(writes, writesAfterRefusal);
+
+      await commitItemMutations(input);
+      assert.equal((await f.client.get(input.mutations[0].id)).item.id, input.mutations[0].id);
+      assert.ok(writes > writesAfterRefusal);
+      assert.deepEqual(calls.map(({ actor, dry_run }) => [actor.author, dry_run]), [
+        ['other-fixture', true], ['other-fixture', false], ['fixture', true], ['fixture', false],
+      ]);
+      assert.deepEqual(calls[0].actor, calls[1].actor);
+      assert.deepEqual(calls[2].actor, calls[3].actor);
+      const id = input.mutations[0].id;
+      const history = await readHistoryEntries(getHistoryPath(f.workspace, id), id);
+      assert.equal(history.at(-1)?.author, calls[3].actor.author);
+    } finally {
+      clearActiveExtensionHooks();
+    }
   });
 });
 

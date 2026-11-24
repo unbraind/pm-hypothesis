@@ -37,7 +37,7 @@ export function sameSchema(expected: AdmissionSchema, actual: AdmissionSchema): 
   if (expected.signature !== actual.signature) throw new HypothesisError('conflict', 'Native schema or status roles changed during admission', 'Read the current schema and retry as a fresh invocation');
 }
 
-/** Execute native lifecycle validation on the exact ordered batch, with no source effects. */
+/** Apply native lifecycle rules and dry-run mutation guards to the exact ordered batch without source writes. */
 export async function validateBatch(input: Pick<CommitItemMutationsOptions, 'pmRoot' | 'author' | 'transactionId' | 'mutations'>) {
   try {
     const receipt = await previewItemMutations(input);
@@ -45,7 +45,7 @@ export async function validateBatch(input: Pick<CommitItemMutationsOptions, 'pmR
     return receipt;
   } catch (error) {
     if (error instanceof HypothesisError) throw error;
-    if (error instanceof PmCliError && error.exitCode === EXIT_CODE.CONFLICT) throw new HypothesisError('conflict', 'Tracker changed during native batch validation', 'Read the current owner, sources and schema, then retry');
+    if (error instanceof PmCliError && error.exitCode === EXIT_CODE.CONFLICT) throw new HypothesisError('conflict', 'Native batch precondition or mutation guard refused the proposed records', 'Check the current owner, sources, schema and active mutation policy before retrying');
     throw new HypothesisError('validation', 'Native SDK batch validation refused the proposed records', 'Inspect native item types, fields, status roles and required creation fields; repair the schema or change the intent');
   }
 }

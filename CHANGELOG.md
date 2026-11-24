@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Other
+
+- Adopt pm-cli 2026.11.24 host-aligned SDK behaviour ([pm-hypothesis-sdk-host-alignment-1122](https://github.com/unbraind/pm-hypothesis/blob/main/.agents/pm/chores/pm-hypothesis-sdk-host-alignment-1122.toon))
+
 ## 2026.11.23 - 2026-11-23
 
 ### Dependencies
@@ -31,3 +37,10 @@ No changes.
 - Adopt SDK whole-envelope output fitting ([pm-hypothesis-sdk-envelope-fitter](https://github.com/unbraind/pm-hypothesis/blob/main/.agents/pm/chores/pm-hypothesis-sdk-envelope-fitter.toon))
 - Standardize the release gate on owner approval with a daily release schedule ([pm-hypothesis-d9dg](https://github.com/unbraind/pm-hypothesis/blob/main/.agents/pm/tasks/pm-hypothesis-d9dg.toon))
 - Apply Fleet CI v2 quick and deep tiers ([pm-hypothesis-ci-v2](https://github.com/unbraind/pm-hypothesis/blob/main/.agents/pm/tasks/pm-hypothesis-ci-v2.toon))
+
+### Dependencies
+
+- Bump eslint ([#43](https://github.com/unbraind/pm-hypothesis/pull/43))
+- Bump @unbrained/pm-cli ([#42](https://github.com/unbraind/pm-hypothesis/pull/42))
+- Bump @babel/eslint-parser ([#40](https://github.com/unbraind/pm-hypothesis/pull/40))
+- Bump the pm-toolchain group with 2 updates ([#39](https://github.com/unbraind/pm-hypothesis/pull/39))
