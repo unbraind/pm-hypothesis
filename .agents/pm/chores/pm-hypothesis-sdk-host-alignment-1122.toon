@@ -1,0 +1,25 @@
+id: pm-hypothesis-sdk-host-alignment-1122
+title: Adopt pm-cli 2026.11.24 host-aligned SDK behaviour
+description: Move the native investigation batch and toolchain to the current SDK. Companion item pm-cli-website-spus.
+type: Chore
+status: in_progress
+priority: 2
+tags: []
+created_at: "2026-11-24T10:39:24.954Z"
+updated_at: "2026-11-24T15:11:11.723Z"
+author: codex-agent
+acceptance_criteria: Pin the current first-party toolchain and refresh the tracked lockfile; Verify transactional guards evaluate preview and commit with the same actor and distinguish dry run; Keep dependency bullets in all changelog entry points; Pass package release and coverage gates
+comments[1]{created_at,author,text}:
+  "2026-11-24T15:11:10.522Z",codex-agent,"The top-level SDK failure was native commit still evaluates extension guards excluded from preview. The old host excluded guards from preview. The current host runs transactional guards in both phases with an identical resolved actor and sets dry_run during preview. Assert the same unauthorized actor is refused in both phases with no source item effects, the authorized actor matches committed history, and preview suppresses extension write hooks. Report either policy or precondition refusal as a native conflict. Reverting that diagnosis failed the focused test. Removal of each changelog dependency flag independently failed its regression. The full baseline reached 60 minutes with 1458 passes including all 1312 interleavings, one failure from the old guard expectation, and ten canceled files. All 93 full-depth targeted tests and 15 tracker-linked tests passed. The existing revert suite proved 24/24 cases. npm and Bun release:check at quick CI depth each passed 509/509 and 2/2 packed consumer journeys with 100% statements, branches, functions and lines across 20 sources. Identity had zero violations, the production audit found zero vulnerabilities, and changelog:check passed."
+files[5]{path,scope}:
+  package-lock.json,project
+  package.json,project
+  src/admission.ts,project
+  test/admission-internals.test.ts,project
+  test/automation-changelog.test.ts,project
+tests[1]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
+  node --test --test-concurrency=2 test/admission-internals.test.ts test/automation-changelog.test.ts,project,codex-agent,"2026-11-24T11:34:45.388Z",local_mutation,deps/adopt-pm-cli-host-alignment-1122
+docs[2]{path,scope}:
+  CHANGELOG.md,project
+  README.md,project
+body: ""
