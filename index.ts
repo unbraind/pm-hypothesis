@@ -23,4 +23,4 @@ export { HypothesisError, tokens } from './src/core.ts';
 /** Native record, prediction, witness, request, receipt and integration contracts. */
 export type { Options, ObserveOptions, Prediction, Hypothesis, Observation, Investigation, Conclusion, MatrixRow, Witness, Request, Packet, ResumeRow, Boundary, SourceIssue } from './src/types.ts';
 /** Activate differential investigation commands and registered item fields. */
-export default defineExtension({ name: 'pm-hypothesis', version: "2026.11.23", description: 'Durable competing explanations and observations', activate: register });
+export default defineExtension({ name: 'pm-hypothesis', version: "2026.11.25", description: 'Durable competing explanations and observations', activate: register });
