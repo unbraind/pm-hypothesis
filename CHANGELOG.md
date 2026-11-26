@@ -1,11 +1,11 @@
 # Changelog
 
-## Unreleased
+## 2026.11.26 - 2026-11-26
 
 ### Dependencies
 
+- Bump unbraind/pm-ops/.github/workflows/daily-release.yml ([#59](https://github.com/unbraind/pm-hypothesis/pull/59))
 - Bump the codeql-action group with 2 updates ([#58](https://github.com/unbraind/pm-hypothesis/pull/58))
-- Bump unbraind/pm-ops/.github/workflows/daily-release.yml
 
 ## 2026.11.25 - 2026-11-25
 

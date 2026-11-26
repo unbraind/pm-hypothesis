@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "repository": "unbraind/pm-hypothesis",
-  "baseSha": "51360b7368cfb7a2d4d30f37cf4f31469dfcd077",
-  "version": "2026.11.25",
-  "runId": 45620922230,
+  "baseSha": "a636a04ac8eaaa3706c67f3e787f0a1d5921185a",
+  "version": "2026.11.26",
+  "runId": 45823451569,
   "runAttempt": 1,
   "configDigest": "19f861084767fcd1b42ece3bc60c873d40cadd652aba909211d2aaf4f1e1ede6"
 }
