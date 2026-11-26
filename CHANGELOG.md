@@ -4,7 +4,7 @@
 
 ### Dependencies
 
-- Bump the codeql-action group with 2 updates
+- Bump the codeql-action group with 2 updates ([#58](https://github.com/unbraind/pm-hypothesis/pull/58))
 
 ## 2026.11.25 - 2026-11-25
 
